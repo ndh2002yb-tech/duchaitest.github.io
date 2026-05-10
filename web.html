@@ -1,0 +1,1575 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Kiểm Tra Dây">
+<meta name="theme-color" content="#1a2744">
+<title>Kiểm Tra Hàng Mẫu Dây Điện</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
+
+<script id="app-config" type="application/json">null</script>
+
+<style>
+  :root {
+    --navy: #1a2744;
+    --navy2: #243460;
+    --blue: #2e5bba;
+    --amber: #f0a500;
+    --amber2: #ffd166;
+    --green: #1db954;
+    --green-bg: #0d3320;
+    --red: #e63946;
+    --red-bg: #3a0f14;
+    --gray: #8a94a6;
+    --surface: #111827;
+    --surface2: #1c2536;
+    --surface3: #242f45;
+    --border: #2d3a52;
+    --text: #e8edf5;
+    --text2: #a0aec0;
+    --radius: 14px;
+    --radius-sm: 8px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+  body {
+    font-family: 'IBM Plex Sans', sans-serif;
+    background: var(--surface);
+    color: var(--text);
+    min-height: 100vh;
+    padding-bottom: env(safe-area-inset-bottom, 20px);
+  }
+
+  /* ── TOP BAR ── */
+  .topbar {
+    background: var(--navy);
+    padding: 52px 20px 16px;
+    position: sticky; top: 0; z-index: 100;
+    border-bottom: 1px solid var(--border);
+  }
+  .topbar-row { display: flex; align-items: center; justify-content: space-between; }
+  .topbar h1 { font-size: 17px; font-weight: 700; letter-spacing: .3px; }
+  .topbar .sub { font-size: 12px; color: var(--amber); font-weight: 600; margin-top: 2px; font-family: 'IBM Plex Mono', monospace; }
+  .badge-count {
+    background: var(--amber); color: var(--navy);
+    font-size: 11px; font-weight: 700;
+    padding: 3px 8px; border-radius: 20px;
+    font-family: 'IBM Plex Mono', monospace;
+  }
+  .settings-btn {
+    background: none; border: none; font-size: 20px; 
+    cursor: pointer; padding: 4px; display: flex; align-items: center;
+    transition: transform 0.2s;
+  }
+  .settings-btn:active { transform: scale(0.9); }
+
+  /* ── STEPS NAV ── */
+  .steps {
+    display: flex; gap: 0;
+    background: var(--navy2);
+    border-bottom: 1px solid var(--border);
+    overflow-x: auto; scrollbar-width: none;
+  }
+  .steps::-webkit-scrollbar { display: none; }
+  .step-btn {
+    flex: 0 0 auto;
+    padding: 10px 16px;
+    font-size: 12px; font-weight: 600;
+    color: var(--text2);
+    background: none; border: none; cursor: pointer;
+    border-bottom: 3px solid transparent;
+    white-space: nowrap; transition: all .2s;
+  }
+  .step-btn.active { color: var(--amber); border-bottom-color: var(--amber); }
+  .step-btn.done { color: var(--green); }
+
+  /* ── CONTENT ── */
+  .content { padding: 16px; max-width: 480px; margin: 0 auto; }
+
+  /* ── CARD ── */
+  .card {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    margin-bottom: 12px;
+    overflow: hidden;
+  }
+  .card-header {
+    background: var(--surface3);
+    padding: 12px 16px;
+    display: flex; align-items: center; gap: 10px;
+    border-bottom: 1px solid var(--border);
+  }
+  .card-header .icon {
+    width: 32px; height: 32px; border-radius: 8px;
+    background: var(--navy2);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px; flex-shrink: 0;
+  }
+  .card-header h3 { font-size: 14px; font-weight: 700; }
+  .card-header .kh { font-size: 11px; color: var(--text2); margin-top: 1px; }
+  .card-body { padding: 14px 16px; }
+
+  /* ── FORM ── */
+  .field { margin-bottom: 14px; }
+  .field:last-child { margin-bottom: 0; }
+  .field label {
+    display: block;
+    font-size: 11px; font-weight: 600;
+    color: var(--text2); text-transform: uppercase;
+    letter-spacing: .6px; margin-bottom: 6px;
+  }
+  .field input, .field select {
+    width: 100%;
+    background: var(--surface3);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 11px 14px;
+    font-size: 15px; color: var(--text);
+    font-family: 'IBM Plex Sans', sans-serif;
+    outline: none; transition: border-color .2s;
+    -webkit-appearance: none;
+  }
+  .field input:focus, .field select:focus { border-color: var(--amber); }
+  
+  .admin-row {
+    display: flex; gap: 8px; margin-bottom: 10px; align-items: center;
+    background: var(--surface3); padding: 10px; border-radius: var(--radius-sm); border: 1px solid var(--border);
+  }
+
+  /* ── SECTION TITLE ── */
+  .section-title {
+    font-size: 11px; font-weight: 700;
+    color: var(--amber); text-transform: uppercase;
+    letter-spacing: 1px; margin: 18px 0 10px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .section-title::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+  /* ── DIMENSION ROW ── */
+  .dim-row {
+    background: var(--surface3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 12px 14px;
+    margin-bottom: 8px;
+  }
+  
+  .measure-grid {
+    margin-bottom: 10px;
+  }
+  .measure-cell { 
+    text-align: center; 
+    background: var(--surface); 
+    padding: 8px 6px; 
+    border-radius: 8px; 
+    border: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+  }
+  .measure-cell .no-label {
+    font-size: 10px; color: var(--text2); font-weight: 600;
+    margin-bottom: 2px; font-family: 'IBM Plex Mono', monospace;
+  }
+  .measure-cell input[type="number"] {
+    width: 100%; text-align: center;
+    background: var(--surface2);
+    border: 1.5px solid var(--border);
+    border-radius: 6px;
+    padding: 8px 2px;
+    font-size: 13px; color: var(--text);
+    font-family: 'IBM Plex Mono', monospace;
+    outline: none; transition: border-color .2s, background-color .2s;
+  }
+  .measure-cell input[type="number"]:focus { border-color: var(--amber); }
+  .measure-cell .result-badge {
+    font-size: 10px; font-weight: 700;
+    padding: 2px 4px; border-radius: 4px;
+    text-align: center; font-family: 'IBM Plex Mono', monospace;
+    min-height: 18px; width: 100%; transition: all .2s;
+  }
+  .result-badge.ok { background: var(--green-bg); color: var(--green); }
+  .result-badge.ng { background: var(--red-bg); color: var(--red); }
+  .result-badge.empty { background: transparent; color: transparent; }
+
+  /* Chụp ảnh CSS */
+  .btn-cam {
+    background: var(--surface3); color: var(--text); border: 1px solid var(--border);
+    padding: 6px; border-radius: 4px; font-size: 10px; font-weight: 600;
+    cursor: pointer; width: 100%; display: flex; align-items: center; justify-content: center; gap: 4px;
+    transition: all 0.2s; font-family: 'IBM Plex Sans', sans-serif;
+  }
+  .btn-cam:active { transform: scale(0.95); background: var(--surface2); }
+  
+  .img-wrapper { position: relative; width: 100%; margin-top: 2px; }
+  .img-preview {
+    width: 100%; height: 50px; object-fit: cover; border-radius: 4px; border: 1px solid var(--border);
+  }
+  .btn-remove-img {
+    position: absolute; top: -6px; right: -6px; background: var(--red); color: white;
+    border: none; border-radius: 50%; width: 18px; height: 18px; font-size: 10px;
+    line-height: 18px; text-align: center; padding: 0; cursor: pointer;
+  }
+
+  /* ── CLIP / TAPE CHECK ── */
+  .check-item {
+    display: flex; align-items: center; gap: 12px;
+    padding: 12px 14px;
+    background: var(--surface3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    margin-bottom: 8px;
+  }
+  .toggle-group { display: flex; gap: 4px; flex-shrink: 0; }
+  .toggle-btn {
+    padding: 6px 12px; border-radius: 6px;
+    font-size: 12px; font-weight: 700;
+    border: 1.5px solid var(--border);
+    background: var(--surface); color: var(--text2);
+    cursor: pointer; transition: all .15s;
+    font-family: 'IBM Plex Mono', monospace;
+  }
+  .toggle-btn.ok-active { background: var(--green-bg); border-color: var(--green); color: var(--green); }
+  .toggle-btn.ng-active { background: var(--red-bg); border-color: var(--red); color: var(--red); }
+
+  /* ── RESULT SUMMARY ── */
+  .result-card {
+    border-radius: var(--radius);
+    padding: 20px;
+    margin-bottom: 12px;
+    text-align: center;
+    border: 2px solid var(--border);
+    background: var(--surface2);
+    transition: all .3s;
+  }
+  .result-card.pass { border-color: var(--green); background: var(--green-bg); }
+  .result-card.fail { border-color: var(--red); background: var(--red-bg); }
+  .result-card .result-emoji { font-size: 40px; margin-bottom: 8px; }
+  .result-card .result-label { font-size: 22px; font-weight: 700; letter-spacing: .5px; }
+  .result-card .result-sub { font-size: 13px; color: var(--text2); margin-top: 6px; }
+
+  .summary-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 14px 0; }
+  .summary-cell {
+    background: var(--surface3); border: 1px solid var(--border);
+    border-radius: var(--radius-sm); padding: 14px;
+    text-align: center;
+  }
+  .summary-cell .s-num { font-size: 28px; font-weight: 700; font-family: 'IBM Plex Mono', monospace; }
+  .summary-cell .s-label { font-size: 11px; color: var(--text2); margin-top: 4px; }
+  .summary-cell.ok .s-num { color: var(--green); }
+  .summary-cell.ng .s-num { color: var(--red); }
+
+  /* ── BUTTONS ── */
+  .btn {
+    width: 100%; padding: 15px;
+    border-radius: var(--radius); border: none;
+    font-size: 15px; font-weight: 700;
+    cursor: pointer; transition: all .2s;
+    font-family: 'IBM Plex Sans', sans-serif;
+    letter-spacing: .3px;
+  }
+  .btn-primary { background: var(--amber); color: var(--navy); }
+  .btn-primary:active { transform: scale(.97); background: var(--amber2); }
+  .btn-secondary { background: var(--surface3); color: var(--text); border: 1.5px solid var(--border); }
+  .btn-secondary:active { transform: scale(.97); }
+  .btn-danger { background: var(--red-bg); color: var(--red); border: 1.5px solid var(--red); }
+
+  .btn-row { display: flex; gap: 10px; margin-top: 16px; }
+  .btn-row .btn { flex: 1; }
+
+  /* ── PAGES ── */
+  .page { display: none; }
+  .page.active { display: block; }
+
+  /* ── NOTE FIELD ── */
+  textarea {
+    width: 100%;
+    background: var(--surface3); border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm); padding: 11px 14px;
+    font-size: 14px; color: var(--text);
+    font-family: 'IBM Plex Sans', sans-serif;
+    outline: none; resize: none; min-height: 80px;
+    transition: border-color .2s;
+  }
+  textarea:focus { border-color: var(--amber); }
+
+  /* ── TOAST ── */
+  .toast {
+    position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%) translateY(100px);
+    background: var(--surface3); color: var(--text);
+    border: 1px solid var(--border); border-radius: 30px;
+    padding: 12px 24px; font-size: 14px; font-weight: 600;
+    z-index: 9999; transition: transform .3s cubic-bezier(.34,1.56,.64,1);
+    white-space: nowrap;
+    text-align: center;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+  }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+
+  /* ── ADD BUTTON ── */
+  .add-btn {
+    width: 100%; padding: 10px;
+    border-radius: var(--radius-sm); border: 1.5px dashed var(--border);
+    background: none; color: var(--text2);
+    font-size: 13px; font-weight: 600; cursor: pointer;
+    transition: all .2s; display: flex; align-items: center; justify-content: center; gap: 6px;
+    font-family: 'IBM Plex Sans', sans-serif;
+  }
+  .add-btn:active { background: var(--surface3); }
+
+  .nav-bottom {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 12px 16px; margin-top: 8px;
+  }
+  .nav-bottom .btn { max-width: 140px; padding: 12px; font-size: 14px; }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-row">
+    <div>
+      <div class="topbar h1" style="font-size:17px;font-weight:700;">🔌 Kiểm Tra Hàng Mẫu</div>
+      <div class="sub" id="topbar-sub">Dây Điện · Điền thông tin đơn hàng</div>
+    </div>
+    <div style="display: flex; align-items: center; gap: 12px;">
+      <div class="badge-count" id="progress-badge" style="display:block;">1/4</div>
+      <button class="settings-btn" onclick="toggleAdmin()" id="btn-settings" title="Cài đặt">⚙️</button>
+    </div>
+  </div>
+</div>
+
+<div class="steps" id="nav-steps">
+  <button class="step-btn active" onclick="goPage(0)" id="tab0">① Thông tin</button>
+  <button class="step-btn" onclick="goPage(1)" id="tab1">② Kích thước</button>
+  <button class="step-btn" onclick="goPage(2)" id="tab2">③ Clip & Băng</button>
+  <button class="step-btn" onclick="goPage(3)" id="tab3">④ Kết quả</button>
+</div>
+
+<div class="page active" id="page0">
+<div class="content">
+  <div class="card" style="margin-top:4px;">
+    <div class="card-header">
+      <div class="icon">📋</div>
+      <div>
+        <div class="card-header h3" style="font-size:14px;font-weight:700;">Thông tin đơn hàng</div>
+        <div class="kh">Nhân viên điền đầy đủ các thông tin sau</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <div id="info-list"></div>
+    </div>
+  </div>
+
+  <div class="nav-bottom" style="padding:0;margin-top:4px;">
+    <div></div>
+    <button class="btn btn-primary" style="max-width:160px;padding:13px;" onclick="goPage(1)">Tiếp theo →</button>
+  </div>
+</div>
+</div>
+
+<div class="page" id="page1">
+<div class="content">
+
+  <div class="section-title">Danh sách kích thước</div>
+  <div id="dim-list"></div>
+
+  <div class="nav-bottom" style="padding:0;margin-top:16px;">
+    <button class="btn btn-secondary" style="max-width:120px;padding:12px;" onclick="goPage(0)">← Quay lại</button>
+    <button class="btn btn-primary" style="max-width:160px;padding:13px;" onclick="goPage(2)">Tiếp theo →</button>
+  </div>
+</div>
+</div>
+
+<div class="page" id="page2">
+<div class="content">
+
+  <div class="section-title">Kiểm tra Clip</div>
+  <div id="clip-list"></div>
+
+  <div class="section-title" style="margin-top:20px;">Kiểm tra Băng Dính</div>
+  <div id="tape-list"></div>
+
+  <div class="nav-bottom" style="padding:0;margin-top:16px;">
+    <button class="btn btn-secondary" style="max-width:120px;padding:12px;" onclick="goPage(1)">← Quay lại</button>
+    <button class="btn btn-primary" style="max-width:160px;padding:13px;" onclick="goPage(3)">Xem kết quả →</button>
+  </div>
+</div>
+</div>
+
+<div class="page" id="page3">
+<div class="content">
+
+  <div id="result-summary-card" class="result-card">
+    <div class="result-emoji" id="r-emoji">📊</div>
+    <div class="result-label" id="r-label">Đang tính...</div>
+    <div class="result-sub" id="r-sub"></div>
+  </div>
+
+  <div class="summary-grid">
+    <div class="summary-cell ok">
+      <div class="s-num" id="ok-count">0</div>
+      <div class="s-label">Hạng mục ĐẠT</div>
+    </div>
+    <div class="summary-cell ng">
+      <div class="s-num" id="ng-count">0</div>
+      <div class="s-label">Hạng mục NG</div>
+    </div>
+  </div>
+
+  <div id="ng-detail-wrap"></div>
+
+  <div class="field" style="margin-top:8px;">
+    <label>Ghi chú / Yêu cầu làm lại</label>
+    <textarea id="ghi-chu" placeholder="Nhập ghi chú nếu có..."></textarea>
+  </div>
+
+  <div class="btn-row" style="margin-top:12px;">
+    <button class="btn btn-secondary" onclick="goPage(2)">← Quay lại</button>
+    <button class="btn btn-primary" onclick="exportResult()">📤 Gửi Quản lý</button>
+  </div>
+
+  <button class="btn btn-danger" style="margin-top:10px;" onclick="resetAll()">🗑 Tạo phiếu mới</button>
+</div>
+</div>
+
+<div class="page" id="page-admin">
+<div class="content">
+  <div class="card" style="margin-top:4px; border-color: var(--amber);">
+    <div class="card-header" style="background: rgba(240,165,0,0.1);">
+      <div class="icon" style="background: var(--amber); color: var(--navy);">⚙️</div>
+      <div>
+        <div class="card-header h3" style="font-size:14px;font-weight:700; color: var(--amber);">Cài đặt hệ thống</div>
+        <div class="kh">Quản lý các trường thông tin & thông số</div>
+      </div>
+    </div>
+    <div class="card-body">
+      
+      <div class="section-title" style="margin-top: 0;">Thông tin đơn hàng</div>
+      <div id="admin-info-list"></div>
+      <button class="add-btn" style="margin-top: 10px;" onclick="addInfoRow()">
+        <span style="font-size:18px;">＋</span> Thêm trường mới
+      </button>
+
+      <div class="section-title" style="margin-top: 24px;">Thông số Kích thước</div>
+      <div id="admin-dim-list"></div>
+      <button class="add-btn" style="margin-top: 10px;" onclick="addDimRow()">
+        <span style="font-size:18px;">＋</span> Thêm kích thước
+      </button>
+
+      <div class="section-title" style="margin-top: 24px;">Thông số Clip</div>
+      <div id="admin-clip-list"></div>
+      <button class="add-btn" style="margin-top: 10px;" onclick="addAdminClip()">
+        <span style="font-size:18px;">＋</span> Thêm loại Clip
+      </button>
+
+      <div class="section-title" style="margin-top: 24px;">Thông số Băng dính</div>
+      <div id="admin-tape-list"></div>
+      <button class="add-btn" style="margin-top: 10px;" onclick="addAdminTape()">
+        <span style="font-size:18px;">＋</span> Thêm Băng dính
+      </button>
+
+    </div>
+  </div>
+  
+  <button class="btn btn-primary" style="margin-top: 10px; background: var(--blue); color: #fff;" onclick="exportConfiguredHTML()">
+    📥 XUẤT FILE HTML (Gửi Nhân Viên)
+  </button>
+  
+  <button class="btn btn-secondary" style="margin-top: 10px;" onclick="toggleAdmin()">Thoát Cài Đặt</button>
+</div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── STATE & CẤU HÌNH BẢO MẬT ───────────────────────────────────────────────
+const ADMIN_PASS = "103202"; 
+
+let currentPage = 0;
+let isAdminMode = false;
+
+// Thông tin mặc định (Nếu file chưa có config nhúng)
+const DEFAULT_INFO = [
+  { label: "Khách hàng", type: "text", value: "" },
+  { label: "Số lượng mẫu", type: "number", value: "5" },
+  { label: "Nhân viên thực hiện", type: "text", value: "" },
+  { label: "Ngày", type: "date", value: "" }
+];
+
+const DEFAULT_DIMS = [
+  { name: "Chiều dài tổng thể (A)", std: "", sai_so: "2" },
+  { name: "Chiều dài đoạn B",       std: "", sai_so: "2" },
+  { name: "Chiều dài đoạn C",       std: "", sai_so: "2" },
+  { name: "Chiều dài đuôi dây đầu 1", std: "", sai_so: "1" },
+  { name: "Chiều dài đuôi dây đầu 2", std: "", sai_so: "1" },
+];
+
+const DEFAULT_CLIPS = [
+  { name: "Clip loại A", pos: "", qty_yc: "", result: null },
+];
+
+const DEFAULT_TAPES = [
+  { name: "Băng vàng", color: "#f0a500", pos: "", vong_yc: "", result: null },
+  { name: "Băng đỏ",   color: "#e63946", pos: "", vong_yc: "", result: null },
+  { name: "Băng trắng",color: "#e8edf5", pos: "", vong_yc: "", result: null },
+];
+
+let infoRows = [];
+let dimRows = [];
+let clipRows = [];
+let tapeRows = [];
+
+// ── INIT: LOAD TỪ THẺ SCRIPT (SOURCE OF TRUTH) ─────────────────────────────
+document.addEventListener("DOMContentLoaded", () => {
+  const configNode = document.getElementById("app-config");
+  let embeddedConfig = null;
+  
+  if (configNode && configNode.textContent && configNode.textContent.trim() !== "null") {
+    try {
+      embeddedConfig = JSON.parse(configNode.textContent);
+    } catch(e) { console.error("Lỗi đọc config:", e); }
+  }
+
+  if (embeddedConfig) {
+    infoRows = embeddedConfig.infoRows;
+    infoRows.forEach(row => { if(row.type === 'date' && !row.value) row.value = new Date().toISOString().slice(0,10); });
+    
+    const initSamples = getNumSamples();
+    dimRows = embeddedConfig.dimRows.map(d => ({ ...d, measures: Array(initSamples).fill(""), images: Array(initSamples).fill(null) }));
+    clipRows = embeddedConfig.clipRows.map(c => ({ ...c, result: null }));
+    tapeRows = embeddedConfig.tapeRows.map(t => ({ ...t, result: null }));
+  } else {
+    // Nếu chưa có config nhúng, load mặc định
+    infoRows = JSON.parse(JSON.stringify(DEFAULT_INFO));
+    infoRows.forEach(row => { if(row.type === 'date' && !row.value) row.value = new Date().toISOString().slice(0,10); });
+    
+    const initSamples = getNumSamples();
+    dimRows = DEFAULT_DIMS.map(d => ({ ...d, measures: Array(initSamples).fill(""), images: Array(initSamples).fill(null), refImage: null }));
+    clipRows = DEFAULT_CLIPS.map(c => ({ ...c, refImage: null }));
+    tapeRows = DEFAULT_TAPES.map(t => ({ ...t, refImage: null }));
+  }
+  
+  renderInfo();
+  renderDims();
+  renderClips();
+  renderTapes();
+});
+
+// ── XUẤT FILE HTML (TẠO FILE MỚI ĐÃ CHỨA SETUP) ────────────────────────────
+function exportConfiguredHTML() {
+  // 1. Gói thông tin Template hiện tại
+  const exportConfig = {
+      infoRows: infoRows.map(r => ({ label: r.label, type: r.type, value: r.type === 'date' ? '' : r.value })), // Reset date
+      dimRows: dimRows.map(r => ({ name: r.name, std: r.std, sai_so: r.sai_so, refImage: r.refImage })),
+      clipRows: clipRows.map(r => ({ name: r.name, pos: r.pos, qty_yc: r.qty_yc, refImage: r.refImage })),
+      tapeRows: tapeRows.map(r => ({ name: r.name, color: r.color, pos: r.pos, vong_yc: r.vong_yc, refImage: r.refImage }))
+  };
+
+  // 2. Chèn cấu hình vào thẻ script gốc
+  document.getElementById("app-config").textContent = JSON.stringify(exportConfig);
+
+  // 3. Xóa các dữ liệu rác trên giao diện DOM trước khi tải file HTML
+  document.querySelectorAll(".page").forEach(p => p.classList.remove("active"));
+  document.getElementById(`page0`).classList.add("active");
+  document.querySelectorAll(".step-btn").forEach((b,i) => {
+    b.classList.remove("active","done");
+    if(i === 0) b.classList.add("active");
+  });
+  
+  // Trả giao diện về chế độ Worker (ẩn Admin)
+  document.getElementById("nav-steps").style.display = "flex";
+  document.getElementById("progress-badge").style.display = "block";
+  document.getElementById("btn-settings").style.color = "";
+  document.getElementById("btn-settings").style.transform = "rotate(0deg)";
+  document.getElementById("topbar-sub").textContent = "Dây Điện · Điền thông tin đơn hàng";
+  
+  // Xóa rỗng các danh sách để file nhẹ hơn, khi mở lên hàm Init sẽ tự sinh ra lại
+  document.getElementById("info-list").innerHTML = "";
+  document.getElementById("dim-list").innerHTML = "";
+  document.getElementById("clip-list").innerHTML = "";
+  document.getElementById("tape-list").innerHTML = "";
+
+  // 4. Lấy toàn bộ mã HTML sau khi đã nhúng cấu hình
+  const htmlContent = "<!DOCTYPE html>\n<html lang=\"vi\">\n" + document.documentElement.innerHTML + "\n</html>";
+
+  // 5. Tải file xuống
+  const blob = new Blob([htmlContent], { type: "text/html;charset=utf-8" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "Form_QC_Setup_San.html";
+  a.click();
+
+  // 6. Reset lại giao diện Admin để dùng tiếp
+  showToast("✅ Đã tạo file HTML mới. Hãy gửi file này cho nhân viên!");
+  isAdminMode = false;
+  goPage(0);
+  
+  // Render lại DOM cho màn hình hiện tại
+  renderInfo(); renderDims(); renderClips(); renderTapes();
+}
+
+
+// ── LOGIC SỐ LƯỢNG MẪU ĐỘNG ────────────────────────────────────────────────
+function getNumSamples() {
+  const slRow = infoRows.find(item => item.label.toLowerCase().includes("số lượng") || item.label.toLowerCase().includes("mẫu"));
+  let n = parseInt(slRow?.value);
+  if (isNaN(n) || n < 1) n = 1; 
+  if (n > 30) n = 30; 
+  return n;
+}
+
+function updateNumSamples() {
+  const n = getNumSamples();
+  dimRows.forEach(row => {
+    if (row.measures.length < n) {
+      row.measures.push(...Array(n - row.measures.length).fill(""));
+      row.images.push(...Array(n - row.images.length).fill(null));
+    } else if (row.measures.length > n) {
+      row.measures = row.measures.slice(0, n);
+      row.images = row.images.slice(0, n);
+    }
+  });
+  renderDims(); 
+}
+
+// ── NAVIGATION ─────────────────────────────────────────────────────────────
+function goPage(idx) {
+  if(isAdminMode) return; 
+  
+  currentPage = idx;
+  document.querySelectorAll(".page").forEach(p => p.classList.remove("active"));
+  document.getElementById(`page${idx}`).classList.add("active");
+  
+  document.querySelectorAll(".step-btn").forEach((b,i) => {
+    b.classList.remove("active","done");
+    if(i === idx) b.classList.add("active");
+    else if(i < idx) b.classList.add("done");
+  });
+  
+  const subs = ["Điền thông tin đơn hàng","Nhập kích thước thực đo","Kiểm tra Clip & Băng dính","Xem kết quả tổng hợp"];
+  document.getElementById("topbar-sub").textContent = "Dây Điện · " + subs[idx];
+  document.getElementById("progress-badge").textContent = `${idx+1}/4`;
+  if(idx === 3) calcResult();
+  window.scrollTo(0,0);
+}
+
+// ── TOGGLE ADMIN (CÓ MẬT KHẨU) ─────────────────────────────────────────────
+function toggleAdmin() {
+  if (!isAdminMode) {
+    const passInput = prompt("🔒 Vui lòng nhập Mật khẩu Quản trị viên để cài đặt:");
+    if (passInput !== ADMIN_PASS) {
+      if (passInput !== null) {
+        alert("❌ Sai mật khẩu! Bạn không có quyền truy cập.");
+      }
+      return; 
+    }
+  }
+
+  isAdminMode = !isAdminMode;
+  
+  const stepsNav = document.getElementById("nav-steps");
+  const badge = document.getElementById("progress-badge");
+  const btnSettings = document.getElementById("btn-settings");
+  const subText = document.getElementById("topbar-sub");
+  
+  if (isAdminMode) {
+    document.querySelectorAll(".page").forEach(p => p.classList.remove("active"));
+    document.getElementById("page-admin").classList.add("active");
+    
+    stepsNav.style.display = "none";
+    badge.style.display = "none";
+    btnSettings.style.color = "var(--amber)";
+    btnSettings.style.transform = "rotate(90deg)";
+    subText.textContent = "⚙️ Quản lý tuỳ chỉnh thông tin";
+    
+    renderAdminInfo();
+    renderAdminDims();
+    renderAdminClips();
+    renderAdminTapes();
+  } else {
+    stepsNav.style.display = "flex";
+    badge.style.display = "block";
+    btnSettings.style.color = "";
+    btnSettings.style.transform = "rotate(0deg)";
+    
+    renderInfo(); 
+    renderDims();
+    renderClips();
+    renderTapes();
+    
+    isAdminMode = false;
+    goPage(currentPage);
+  }
+}
+
+// ── XỬ LÝ ẢNH MINH HỌA (TỪ ADMIN) ──────────────────────────────────────────
+function handleRefImageUpload(type, ri, input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const img = new Image();
+    img.onload = function() {
+      const canvas = document.createElement('canvas');
+      const MAX_WIDTH = 600; 
+      let scaleSize = MAX_WIDTH / img.width;
+      if (scaleSize > 1) scaleSize = 1; 
+
+      canvas.width = img.width * scaleSize;
+      canvas.height = img.height * scaleSize;
+      
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      const compressedBase64 = canvas.toDataURL('image/jpeg', 0.6); 
+
+      if (type === 'dim') { dimRows[ri].refImage = compressedBase64; renderAdminDims(); }
+      else if (type === 'clip') { clipRows[ri].refImage = compressedBase64; renderAdminClips(); }
+      else if (type === 'tape') { tapeRows[ri].refImage = compressedBase64; renderAdminTapes(); }
+    }
+    img.src = e.target.result;
+  }
+  reader.readAsDataURL(file);
+}
+
+function removeRefImage(type, ri) {
+  if(!confirm("Xóa ảnh minh họa này?")) return;
+  if (type === 'dim') { dimRows[ri].refImage = null; renderAdminDims(); }
+  else if (type === 'clip') { clipRows[ri].refImage = null; renderAdminClips(); }
+  else if (type === 'tape') { tapeRows[ri].refImage = null; renderAdminTapes(); }
+}
+
+
+// ── INFO ROWS (NHÂN VIÊN & ADMIN) ──────────────────────────────────────────
+function renderInfo() {
+  const list = document.getElementById("info-list");
+  list.innerHTML = "";
+  infoRows.forEach((row, ri) => {
+    const div = document.createElement("div");
+    div.className = "field";
+    div.innerHTML = `
+      <label>${row.label}</label>
+      <input type="${row.type}" value="${row.value}" placeholder="..."
+        oninput="infoRows[${ri}].value=this.value; updateNumSamples();">
+    `;
+    list.appendChild(div);
+  });
+}
+
+function renderAdminInfo() {
+  const list = document.getElementById("admin-info-list");
+  list.innerHTML = "";
+  infoRows.forEach((row, ri) => {
+    const div = document.createElement("div");
+    div.className = "admin-row";
+    div.innerHTML = `
+      <input type="text" value="${row.label}" placeholder="Tên trường..."
+        style="flex:1; background:var(--surface); border:1px solid var(--border); border-radius:4px; padding:8px 10px; font-size:13px; color:var(--text); outline:none; font-family:'IBM Plex Sans',sans-serif;"
+        onchange="infoRows[${ri}].label=this.value">
+      
+      <select style="background:var(--surface); border:1px solid var(--border); border-radius:4px; padding:8px; font-size:13px; color:var(--text); outline:none; font-family:'IBM Plex Sans',sans-serif;"
+        onchange="infoRows[${ri}].type=this.value">
+        <option value="text" ${row.type==='text'?'selected':''}>Chữ</option>
+        <option value="number" ${row.type==='number'?'selected':''}>Số</option>
+        <option value="date" ${row.type==='date'?'selected':''}>Ngày</option>
+      </select>
+      
+      <button onclick="removeInfo(${ri})" title="Xoá" 
+        style="background:var(--red-bg); border:1px solid var(--red); color:var(--red); border-radius:4px; padding:8px 12px; cursor:pointer; font-weight:bold;">✕</button>
+    `;
+    list.appendChild(div);
+  });
+}
+function addInfoRow() { infoRows.push({ label: "Trường dữ liệu mới", type: "text", value: "" }); renderAdminInfo(); showToast("Đã thêm trường mới"); }
+function removeInfo(ri) { if(!confirm("Bạn có chắc muốn xoá trường này?")) return; infoRows.splice(ri, 1); renderAdminInfo(); }
+
+// ── XỬ LÝ CHỤP ẢNH CỦA NHÂN VIÊN ───────────────────────────────────────────
+function handleImageUpload(ri, ni, input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const img = new Image();
+    img.onload = function() {
+      const canvas = document.createElement('canvas');
+      const MAX_WIDTH = 800; 
+      let scaleSize = MAX_WIDTH / img.width;
+      if (scaleSize > 1) scaleSize = 1; 
+
+      canvas.width = img.width * scaleSize;
+      canvas.height = img.height * scaleSize;
+      
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      const compressedBase64 = canvas.toDataURL('image/jpeg', 0.7);
+      
+      dimRows[ri].images[ni] = compressedBase64;
+      renderDims(); 
+    }
+    img.src = e.target.result;
+  }
+  reader.readAsDataURL(file);
+}
+
+function removeImage(ri, ni) {
+  if(confirm("Xóa ảnh chụp thực tế này?")) {
+    dimRows[ri].images[ni] = null;
+    renderDims();
+  }
+}
+
+// ── DIM ROWS (NHÂN VIÊN) ───────────────────────────────────────────────────
+function renderDims() {
+  const list = document.getElementById("dim-list");
+  list.innerHTML = "";
+  
+  const numSamples = getNumSamples();
+  const gridCols = numSamples > 5 ? 5 : numSamples;
+
+  dimRows.forEach((row, ri) => {
+    const div = document.createElement("div");
+    div.className = "dim-row";
+    
+    let refHtml = "";
+    if (row.refImage) {
+      refHtml = `
+      <div style="margin-bottom: 10px; padding: 6px; background: rgba(240,165,0,0.05); border: 1px dashed var(--amber); border-radius: 6px; text-align: center;">
+        <div style="font-size: 10px; color: var(--amber); font-weight: bold; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px;">🖼️ Ảnh Mẫu Tiêu Chuẩn</div>
+        <img src="${row.refImage}" style="max-width: 100%; max-height: 160px; border-radius: 4px; object-fit: contain;">
+      </div>`;
+    }
+
+    div.innerHTML = `
+      <div class="dim-name" style="margin-bottom: 8px;">
+        <div style="font-size:13px;font-weight:600;color:var(--text);">${row.name}</div>
+      </div>
+      
+      ${refHtml}
+
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px; background: rgba(255,255,255,0.03); padding: 8px; border-radius: 6px;">
+        <div style="flex:1;">
+          <div style="font-size:10px;color:var(--text2);font-weight:600;text-transform:uppercase;letter-spacing:.5px;">Tiêu chuẩn</div>
+          <div style="font-size:13px;color:var(--amber);font-family:'IBM Plex Mono',monospace;font-weight:bold;">${row.std || "—"} mm</div>
+        </div>
+        <div style="flex:1;">
+          <div style="font-size:10px;color:var(--text2);font-weight:600;text-transform:uppercase;letter-spacing:.5px;">Sai số (+)</div>
+          <div style="font-size:13px;color:var(--text);font-family:'IBM Plex Mono',monospace;">${row.sai_so || "0"} mm</div>
+        </div>
+      </div>
+      
+      <div class="measure-grid" id="mg-${ri}" style="display: grid; grid-template-columns: repeat(${gridCols}, 1fr); gap: 6px;">
+        ${Array.from({length: numSamples}, (_,ni)=>`
+          <div class="measure-cell">
+            <div class="no-label">NO.${ni+1}</div>
+            <input type="number" placeholder="—" value="${row.measures[ni] || ''}"
+              oninput="dimRows[${ri}].measures[${ni}]=this.value;updateSingleResult(${ri},${ni},this)">
+            <div class="result-badge empty" id="rb-${ri}-${ni}"></div>
+            
+            <input type="file" id="cam-${ri}-${ni}" accept="image/*" capture="environment" style="display:none" onchange="handleImageUpload(${ri}, ${ni}, this)">
+            
+            ${!row.images[ni] ? `
+              <button class="btn-cam" onclick="document.getElementById('cam-${ri}-${ni}').click()">📷 Chụp</button>
+            ` : `
+              <div class="img-wrapper">
+                <img src="${row.images[ni]}" class="img-preview">
+                <button class="btn-remove-img" onclick="removeImage(${ri}, ${ni})">✕</button>
+              </div>
+            `}
+          </div>
+        `).join("")}
+      </div>
+    `;
+    list.appendChild(div);
+    row.measures.forEach((_,ni) => updateSingleResult(ri, ni, null));
+  });
+}
+
+function updateSingleResult(ri, ni, inputEl) {
+  const row = dimRows[ri];
+  const badge = document.getElementById(`rb-${ri}-${ni}`);
+  const targetInput = inputEl || document.querySelector(`#mg-${ri} .measure-cell:nth-child(${ni+1}) input`);
+  
+  if (!badge) return;
+  const val = parseFloat(row.measures[ni]);
+  const std = parseFloat(row.std);
+  const sai = parseFloat(row.sai_so) || 0;
+  
+  if (isNaN(val) || row.measures[ni] === "" || isNaN(std) || row.std === "") {
+    badge.className = "result-badge empty"; 
+    badge.textContent = ""; 
+    if (targetInput) {
+      targetInput.style.borderColor = "var(--border)";
+      targetInput.style.backgroundColor = "var(--surface2)";
+      targetInput.style.color = "var(--text)";
+    }
+    return;
+  }
+  
+  const ok = val >= std && val <= std + sai;
+  badge.className = "result-badge " + (ok ? "ok" : "ng");
+  badge.textContent = ok ? "✅ OK" : "❌ NG";
+
+  if (targetInput) {
+    if (ok) {
+      targetInput.style.borderColor = "var(--green)";
+      targetInput.style.backgroundColor = "rgba(29, 185, 84, 0.15)";
+      targetInput.style.color = "var(--green)";
+    } else {
+      targetInput.style.borderColor = "var(--red)";
+      targetInput.style.backgroundColor = "var(--red-bg)";
+      targetInput.style.color = "var(--red)";
+    }
+  }
+}
+
+// ── DIM ROWS (ADMIN) ───────────────────────────────────────────────────────
+function renderAdminDims() {
+  const list = document.getElementById("admin-dim-list");
+  list.innerHTML = "";
+  dimRows.forEach((row, ri) => {
+    const div = document.createElement("div");
+    div.className = "admin-row";
+    div.style.flexDirection = "column";
+    div.style.alignItems = "stretch";
+    div.innerHTML = `
+      <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 8px;">
+        <input type="text" value="${row.name}" placeholder="Tên kích thước..."
+          style="flex:1; background:var(--surface); border:1px solid var(--border); border-radius:4px; padding:8px 10px; font-size:13px; color:var(--text); outline:none; font-family:'IBM Plex Sans',sans-serif;"
+          onchange="dimRows[${ri}].name=this.value">
+        <button onclick="removeDim(${ri})" title="Xoá" 
+          style="background:var(--red-bg); border:1px solid var(--red); color:var(--red); border-radius:4px; padding:8px 12px; cursor:pointer; font-weight:bold;">✕</button>
+      </div>
+      <div style="display: flex; gap: 8px;">
+        <div style="flex:1;">
+          <div style="font-size:10px; color:var(--text2); margin-bottom: 4px;">Tiêu chuẩn (mm)</div>
+          <input type="number" value="${row.std}" placeholder="Ví dụ: 100"
+            style="width:100%; background:var(--surface); border:1px solid var(--border); border-radius:4px; padding:8px 10px; font-size:13px; color:var(--text); outline:none; font-family:'IBM Plex Mono',monospace;"
+            onchange="dimRows[${ri}].std=this.value">
+        </div>
+        <div style="flex:1;">
+          <div style="font-size:10px; color:var(--text2); margin-bottom: 4px;">Sai số (+mm)</div>
+          <input type="number" value="${row.sai_so}" placeholder="Ví dụ: 2"
+            style="width:100%; background:var(--surface); border:1px solid var(--border); border-radius:4px; padding:8px 10px; font-size:13px; color:var(--text); outline:none; font-family:'IBM Plex Mono',monospace;"
+            onchange="dimRows[${ri}].sai_so=this.value">
+        </div>
+      </div>
+      <div style="display: flex; gap: 8px; margin-top: 8px; border-top: 1px dashed var(--border); padding-top: 8px;">
+        <div style="flex:1;">
+          <div style="font-size:10px; color:var(--text2); margin-bottom: 4px;">🖼️ Ảnh minh họa cho nhân viên xem</div>
+          <input type="file" id="ref-dim-${ri}" accept="image/*" style="display:none" onchange="handleRefImageUpload('dim', ${ri}, this)">
+          <div style="display:flex; gap:10px; align-items:center;">
+            <button onclick="document.getElementById('ref-dim-${ri}').click()" style="padding: 6px 12px; font-size:11px; border-radius:4px; border:1px solid var(--border); background:var(--surface2); color:var(--text); cursor:pointer;">+ Đính kèm ảnh mẫu</button>
+            ${row.refImage ? `<img src="${row.refImage}" style="height:30px; border-radius:4px;"> <button onclick="removeRefImage('dim', ${ri})" style="color:var(--red); background:none; border:none; cursor:pointer; font-size: 11px;">Xóa</button>` : ''}
+          </div>
+        </div>
+      </div>
+    `;
+    list.appendChild(div);
+  });
+}
+
+function addDimRow() {
+  const initSamples = getNumSamples();
+  dimRows.push({ name: "Kích thước mới", std: "", sai_so: "2", measures: Array(initSamples).fill(""), images: Array(initSamples).fill(null), refImage: null });
+  renderAdminDims();
+  showToast("Đã thêm kích thước");
+}
+
+function removeDim(ri) {
+  if(!confirm("Bạn có chắc muốn xoá kích thước này?")) return;
+  dimRows.splice(ri, 1);
+  renderAdminDims();
+}
+
+
+// ── ADMIN CLIP & TAPE ROWS ──────────────────────────────────────────────────
+function renderAdminClips() {
+  const list = document.getElementById("admin-clip-list");
+  list.innerHTML = "";
+  clipRows.forEach((row, ri) => {
+    const div = document.createElement("div");
+    div.className = "admin-row";
+    div.style.flexDirection = "column";
+    div.style.alignItems = "stretch";
+    div.innerHTML = `
+      <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 8px;">
+        <div style="font-size:20px;">🔩</div>
+        <input type="text" value="${row.name}" placeholder="Tên loại clip..."
+          style="flex:1; background:var(--surface); border:1px solid var(--border); border-radius:4px; padding:8px 10px; font-size:13px; color:var(--text); outline:none; font-family:'IBM Plex Sans',sans-serif;"
+          onchange="clipRows[${ri}].name=this.value">
+        <button onclick="removeAdminClip(${ri})" title="Xoá" 
+          style="background:var(--red-bg); border:1px solid var(--red); color:var(--red); border-radius:4px; padding:8px 12px; cursor:pointer; font-weight:bold;">✕</button>
+      </div>
+      <div style="display: flex; gap: 8px;">
+        <div style="flex:1;">
+          <div style="font-size:10px; color:var(--text2); margin-bottom: 4px;">Vị trí lắp</div>
+          <input type="text" value="${row.pos}" placeholder="Ví dụ: Đầu A"
+            style="width:100%; background:var(--surface); border:1px solid var(--border); border-radius:4px; padding:8px 10px; font-size:13px; color:var(--text); outline:none;"
+            onchange="clipRows[${ri}].pos=this.value">
+        </div>
+        <div style="flex:1;">
+          <div style="font-size:10px; color:var(--text2); margin-bottom: 4px;">Số lượng YC</div>
+          <input type="number" value="${row.qty_yc}" placeholder="Ví dụ: 2"
+            style="width:100%; background:var(--surface); border:1px solid var(--border); border-radius:4px; padding:8px 10px; font-size:13px; color:var(--text); outline:none; font-family:'IBM Plex Mono',monospace;"
+            onchange="clipRows[${ri}].qty_yc=this.value">
+        </div>
+      </div>
+      <div style="display: flex; gap: 8px; margin-top: 8px; border-top: 1px dashed var(--border); padding-top: 8px;">
+        <div style="flex:1;">
+          <div style="font-size:10px; color:var(--text2); margin-bottom: 4px;">🖼️ Ảnh minh họa loại Clip</div>
+          <input type="file" id="ref-clip-${ri}" accept="image/*" style="display:none" onchange="handleRefImageUpload('clip', ${ri}, this)">
+          <div style="display:flex; gap:10px; align-items:center;">
+            <button onclick="document.getElementById('ref-clip-${ri}').click()" style="padding: 6px 12px; font-size:11px; border-radius:4px; border:1px solid var(--border); background:var(--surface2); color:var(--text); cursor:pointer;">+ Đính kèm ảnh mẫu</button>
+            ${row.refImage ? `<img src="${row.refImage}" style="height:30px; border-radius:4px;"> <button onclick="removeRefImage('clip', ${ri})" style="color:var(--red); background:none; border:none; cursor:pointer; font-size: 11px;">Xóa</button>` : ''}
+          </div>
+        </div>
+      </div>
+    `;
+    list.appendChild(div);
+  });
+}
+function addAdminClip() { clipRows.push({ name: "Clip mới", pos: "", qty_yc: "", result: null, refImage: null }); renderAdminClips(); showToast("Đã thêm Clip"); }
+function removeAdminClip(ri) { if(confirm("Xóa Clip này?")){ clipRows.splice(ri,1); renderAdminClips(); } }
+
+function renderAdminTapes() {
+  const list = document.getElementById("admin-tape-list");
+  list.innerHTML = "";
+  tapeRows.forEach((row, ri) => {
+    const div = document.createElement("div");
+    div.className = "admin-row";
+    div.style.flexDirection = "column";
+    div.style.alignItems = "stretch";
+    div.innerHTML = `
+      <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 8px;">
+        <input type="color" value="${row.color}" onchange="tapeRows[${ri}].color=this.value" style="width:34px; height:34px; border:none; border-radius:4px; cursor:pointer; background:none; padding:0;">
+        <input type="text" value="${row.name}" placeholder="Tên băng dính..."
+          style="flex:1; background:var(--surface); border:1px solid var(--border); border-radius:4px; padding:8px 10px; font-size:13px; color:var(--text); outline:none; font-family:'IBM Plex Sans',sans-serif;"
+          onchange="tapeRows[${ri}].name=this.value">
+        <button onclick="removeAdminTape(${ri})" title="Xoá" 
+          style="background:var(--red-bg); border:1px solid var(--red); color:var(--red); border-radius:4px; padding:8px 12px; cursor:pointer; font-weight:bold;">✕</button>
+      </div>
+      <div style="display: flex; gap: 8px;">
+        <div style="flex:1;">
+          <div style="font-size:10px; color:var(--text2); margin-bottom: 4px;">Vị trí dán</div>
+          <input type="text" value="${row.pos}" placeholder="Ví dụ: Thân dây"
+            style="width:100%; background:var(--surface); border:1px solid var(--border); border-radius:4px; padding:8px 10px; font-size:13px; color:var(--text); outline:none;"
+            onchange="tapeRows[${ri}].pos=this.value">
+        </div>
+        <div style="flex:1;">
+          <div style="font-size:10px; color:var(--text2); margin-bottom: 4px;">Số vòng YC</div>
+          <input type="number" value="${row.vong_yc}" placeholder="Ví dụ: 3"
+            style="width:100%; background:var(--surface); border:1px solid var(--border); border-radius:4px; padding:8px 10px; font-size:13px; color:var(--text); outline:none; font-family:'IBM Plex Mono',monospace;"
+            onchange="tapeRows[${ri}].vong_yc=this.value">
+        </div>
+      </div>
+      <div style="display: flex; gap: 8px; margin-top: 8px; border-top: 1px dashed var(--border); padding-top: 8px;">
+        <div style="flex:1;">
+          <div style="font-size:10px; color:var(--text2); margin-bottom: 4px;">🖼️ Ảnh minh họa Băng dính</div>
+          <input type="file" id="ref-tape-${ri}" accept="image/*" style="display:none" onchange="handleRefImageUpload('tape', ${ri}, this)">
+          <div style="display:flex; gap:10px; align-items:center;">
+            <button onclick="document.getElementById('ref-tape-${ri}').click()" style="padding: 6px 12px; font-size:11px; border-radius:4px; border:1px solid var(--border); background:var(--surface2); color:var(--text); cursor:pointer;">+ Đính kèm ảnh mẫu</button>
+            ${row.refImage ? `<img src="${row.refImage}" style="height:30px; border-radius:4px;"> <button onclick="removeRefImage('tape', ${ri})" style="color:var(--red); background:none; border:none; cursor:pointer; font-size: 11px;">Xóa</button>` : ''}
+          </div>
+        </div>
+      </div>
+    `;
+    list.appendChild(div);
+  });
+}
+function addAdminTape() { tapeRows.push({ name: "Băng dính mới", color: "#8a94a6", pos: "", vong_yc: "", result: null, refImage: null }); renderAdminTapes(); showToast("Đã thêm Băng dính"); }
+function removeAdminTape(ri) { if(confirm("Xóa Băng dính này?")){ tapeRows.splice(ri,1); renderAdminTapes(); } }
+
+
+// ── WORKER CLIP & TAPE ROWS (Chỉ được chọn ĐẠT / NG) ───────────────────────
+function renderClips() {
+  const list = document.getElementById("clip-list");
+  list.innerHTML = "";
+  clipRows.forEach((row, ri) => {
+    const div = document.createElement("div");
+    div.className = "check-item";
+    div.style.flexDirection = "column";
+    div.style.alignItems = "stretch";
+    
+    let refHtml = "";
+    if (row.refImage) {
+      refHtml = `
+      <div style="margin-bottom: 10px; padding: 6px; background: rgba(240,165,0,0.05); border: 1px dashed var(--amber); border-radius: 6px; text-align: center;">
+        <img src="${row.refImage}" style="max-width: 100%; max-height: 120px; border-radius: 4px; object-fit: contain;">
+      </div>`;
+    }
+
+    div.innerHTML = `
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+        <div style="font-size:20px;">🔩</div>
+        <div style="flex:1;color:var(--text);font-size:13px;font-weight:600;">${row.name}</div>
+      </div>
+      
+      ${refHtml}
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px; background: rgba(255,255,255,0.03); padding: 8px; border-radius: 6px;">
+        <div>
+          <div style="font-size:10px;color:var(--text2);font-weight:600;margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px;">Vị trí lắp</div>
+          <div style="font-size:13px;color:var(--text);">${row.pos || "—"}</div>
+        </div>
+        <div>
+          <div style="font-size:10px;color:var(--text2);font-weight:600;margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px;">Số lượng YC</div>
+          <div style="font-size:13px;color:var(--amber);font-family:'IBM Plex Mono',monospace;font-weight:bold;">${row.qty_yc || "0"}</div>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;">
+        <span style="font-size:12px;color:var(--text2);">Kết quả:</span>
+        <div class="toggle-group">
+          <button class="toggle-btn ${row.result===true?'ok-active':''}" onclick="setClipResult(${ri},true)">✅ ĐẠT</button>
+          <button class="toggle-btn ${row.result===false?'ng-active':''}" onclick="setClipResult(${ri},false)">❌ NG</button>
+        </div>
+      </div>
+    `;
+    list.appendChild(div);
+  });
+}
+function setClipResult(ri, val) { clipRows[ri].result = val; renderClips(); }
+
+function renderTapes() {
+  const list = document.getElementById("tape-list");
+  list.innerHTML = "";
+  tapeRows.forEach((row, ri) => {
+    const div = document.createElement("div");
+    div.className = "check-item";
+    div.style.flexDirection = "column";
+    div.style.alignItems = "stretch";
+    
+    let refHtml = "";
+    if (row.refImage) {
+      refHtml = `
+      <div style="margin-bottom: 10px; padding: 6px; background: rgba(240,165,0,0.05); border: 1px dashed var(--amber); border-radius: 6px; text-align: center;">
+        <img src="${row.refImage}" style="max-width: 100%; max-height: 120px; border-radius: 4px; object-fit: contain;">
+      </div>`;
+    }
+
+    div.innerHTML = `
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+        <div style="width:16px;height:16px;border-radius:50%;background:${row.color};flex-shrink:0;border:2px solid rgba(255,255,255,.2);"></div>
+        <div style="flex:1;color:var(--text);font-size:13px;font-weight:600;">${row.name}</div>
+      </div>
+      
+      ${refHtml}
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px; background: rgba(255,255,255,0.03); padding: 8px; border-radius: 6px;">
+        <div>
+          <div style="font-size:10px;color:var(--text2);font-weight:600;margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px;">Vị trí dán</div>
+          <div style="font-size:13px;color:var(--text);">${row.pos || "—"}</div>
+        </div>
+        <div>
+          <div style="font-size:10px;color:var(--text2);font-weight:600;margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px;">Số vòng YC</div>
+          <div style="font-size:13px;color:var(--amber);font-family:'IBM Plex Mono',monospace;font-weight:bold;">${row.vong_yc || "0"}</div>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;">
+        <span style="font-size:12px;color:var(--text2);">Kết quả:</span>
+        <div class="toggle-group">
+          <button class="toggle-btn ${row.result===true?'ok-active':''}" onclick="setTapeResult(${ri},true)">✅ ĐẠT</button>
+          <button class="toggle-btn ${row.result===false?'ng-active':''}" onclick="setTapeResult(${ri},false)">❌ NG</button>
+        </div>
+      </div>
+    `;
+    list.appendChild(div);
+  });
+}
+function setTapeResult(ri, val) { tapeRows[ri].result = val; renderTapes(); }
+
+
+// ── RESULT CALC ────────────────────────────────────────────────────────────
+function calcResult() {
+  let okCount = 0, ngCount = 0, ngDetails = [];
+
+  dimRows.forEach(row => {
+    const std = parseFloat(row.std);
+    const sai = parseFloat(row.sai_so) || 0;
+    if (isNaN(std)) return;
+    row.measures.forEach((m, ni) => {
+      const val = parseFloat(m);
+      if (isNaN(val) || m === "") return;
+      const ok = val >= std && val <= std + sai;
+      if (ok) okCount++;
+      else { ngCount++; ngDetails.push(`${row.name} – NO.${ni+1}: ${val}mm (TC: ${std}mm +${sai}mm)`); }
+    });
+  });
+
+  clipRows.forEach(row => {
+    if (row.result === true) okCount++;
+    else if (row.result === false) { ngCount++; ngDetails.push(`Clip: ${row.name}`); }
+  });
+
+  tapeRows.forEach(row => {
+    if (row.result === true) okCount++;
+    else if (row.result === false) { ngCount++; ngDetails.push(`Băng: ${row.name}`); }
+  });
+
+  document.getElementById("ok-count").textContent = okCount;
+  document.getElementById("ng-count").textContent = ngCount;
+
+  const card = document.getElementById("result-summary-card");
+  const emoji = document.getElementById("r-emoji");
+  const label = document.getElementById("r-label");
+  const sub   = document.getElementById("r-sub");
+
+  if (ngCount === 0 && okCount > 0) {
+    card.className = "result-card pass"; emoji.textContent = "✅"; label.textContent = "ĐẠT – XUẤT MẪU"; sub.textContent = `Tất cả ${okCount} hạng mục kiểm tra đạt yêu cầu`;
+  } else if (ngCount > 0) {
+    card.className = "result-card fail"; emoji.textContent = "❌"; label.textContent = "KHÔNG ĐẠT – LÀM LẠI"; sub.textContent = `Có ${ngCount} hạng mục không đạt yêu cầu`;
+  } else {
+    card.className = "result-card"; emoji.textContent = "📊"; label.textContent = "Chưa đủ dữ liệu"; sub.textContent = "Vui lòng điền đầy đủ thông tin kiểm tra";
+  }
+
+  const wrap = document.getElementById("ng-detail-wrap");
+  if (ngDetails.length > 0) {
+    wrap.innerHTML = `
+      <div style="background:var(--red-bg);border:1px solid var(--red);border-radius:var(--radius-sm);padding:14px;margin-bottom:12px;">
+        <div style="font-size:12px;font-weight:700;color:var(--red);margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px;">Hạng mục không đạt</div>
+        ${ngDetails.map(d=>`<div style="font-size:12px;color:var(--text);padding:4px 0;border-bottom:1px solid rgba(230,57,70,.2);font-family:'IBM Plex Mono',monospace;">• ${d}</div>`).join("")}
+      </div>`;
+  } else {
+    wrap.innerHTML = "";
+  }
+}
+
+// ── EXPORT EXCEL & TỰ ĐỘNG GỬI TELEGRAM ───────────────────────────────────
+async function exportResult() {
+  const workbook = new ExcelJS.Workbook();
+  const sheet = workbook.addWorksheet('Checklist QC');
+
+  const n = getNumSamples();
+  const maxColNum = 2 * n + 5; 
+
+  let excelCols = [{ width: 28 }, { width: 14 }, { width: 14 }];
+  for(let i=0; i<n; i++) excelCols.push({ width: 10 }); 
+  excelCols.push({ width: 12 }); 
+  for(let i=0; i<n; i++) excelCols.push({ width: 16 }); 
+  excelCols.push({ width: 20 }); 
+  sheet.columns = excelCols;
+
+  const applyBorder = (cell) => {
+    cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+  };
+
+  sheet.mergeCells(1, 1, 2, maxColNum); 
+  const titleCell = sheet.getCell(1, 1);
+  titleCell.value = 'PHIẾU KIỂM TRA HÀNG MẪU DÂY ĐIỆN';
+  titleCell.font = { name: 'Arial', size: 16, bold: true, color: { argb: 'FFFFFFFF' } };
+  titleCell.alignment = { vertical: 'middle', horizontal: 'center' };
+  titleCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1A2744' } }; 
+
+  let r = 4; 
+
+  // 1. THÔNG TIN
+  sheet.mergeCells(r, 1, r, maxColNum);
+  let infoTitle = sheet.getCell(r, 1);
+  infoTitle.value = 'I. THÔNG TIN CHUNG';
+  infoTitle.font = { bold: true, size: 12, color: { argb: 'FF1A2744' } };
+  infoTitle.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF0A500' } }; 
+  applyBorder(infoTitle);
+  r++;
+
+  infoRows.forEach(row => {
+    sheet.mergeCells(r, 1, r, 2);
+    let labelCell = sheet.getCell(r, 1);
+    labelCell.value = row.label;
+    labelCell.font = { bold: true };
+    applyBorder(labelCell);
+    
+    sheet.mergeCells(r, 3, r, maxColNum);
+    let valueCell = sheet.getCell(r, 3);
+    valueCell.value = row.value || '';
+    applyBorder(valueCell);
+    
+    r++;
+  });
+  r++;
+
+  // 2. KÍCH THƯỚC
+  sheet.mergeCells(r, 1, r, maxColNum);
+  let dimTitle = sheet.getCell(r, 1);
+  dimTitle.value = 'II. KIỂM TRA KÍCH THƯỚC';
+  dimTitle.font = { bold: true, size: 12, color: { argb: 'FF1A2744' } };
+  dimTitle.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF0A500' } };
+  applyBorder(dimTitle);
+  r++;
+
+  let dimHeaders = ['Tên kích thước', 'Tiêu chuẩn (mm)', 'Sai số (+mm)'];
+  for(let i=1; i<=n; i++) dimHeaders.push(`NO.${i}`);
+  dimHeaders.push('Kết quả');
+  for(let i=1; i<=n; i++) dimHeaders.push(`Ảnh xác minh NO.${i}`);
+  dimHeaders.push('Ảnh mẫu (Admin)');
+  
+  const headerRow = sheet.getRow(r);
+  headerRow.values = dimHeaders;
+  headerRow.font = { bold: true };
+  headerRow.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
+  headerRow.eachCell(cell => {
+    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE8EDF5' } };
+    applyBorder(cell);
+  });
+  r++;
+
+  dimRows.forEach(row => {
+    let rowData = [row.name, row.std, row.sai_so];
+    let okCount = 0, totalCount = 0;
+    let measureResults = []; 
+    
+    row.measures.forEach(m => {
+      let val = parseFloat(m);
+      if (!isNaN(val)) {
+        rowData.push(val); totalCount++;
+        let std = parseFloat(row.std), sai = parseFloat(row.sai_so) || 0;
+        let isOk = (val >= std && val <= std + sai);
+        if (isOk) okCount++;
+        measureResults.push(isOk);
+      } else {
+        rowData.push(''); 
+        measureResults.push(null);
+      }
+    });
+
+    let resultTxt = (totalCount > 0 && okCount === totalCount) ? 'ĐẠT' : (totalCount > 0 ? 'NG' : '');
+    rowData.push(resultTxt);
+    
+    for(let i=0; i<n; i++) rowData.push(''); 
+    rowData.push(''); 
+
+    let dataRow = sheet.getRow(r);
+    dataRow.values = rowData;
+    dataRow.alignment = { vertical: 'middle' };
+    
+    for (let colIndex = 1; colIndex <= maxColNum; colIndex++) {
+      let cell = dataRow.getCell(colIndex);
+      applyBorder(cell);
+      if (colIndex > 3) cell.alignment = { horizontal: 'center', vertical: 'middle' };
+      
+      if (colIndex >= 4 && colIndex < 4 + n) {
+        let mIndex = colIndex - 4;
+        if (measureResults[mIndex] === false) { 
+           cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFF0000' } }; 
+           cell.font = { color: { argb: 'FF000000' }, bold: true }; 
+        }
+      }
+
+      if (colIndex === 4 + n) { 
+        cell.font = { bold: true, color: { argb: cell.value === 'ĐẠT' ? 'FF1DB954' : 'FFE63946' } };
+      }
+    }
+
+    let hasImages = row.images.some(img => img !== null);
+    let hasRefImage = row.refImage !== null;
+
+    if (hasImages || hasRefImage) {
+      dataRow.height = 70; 
+
+      row.images.forEach((imgBase64, ni) => {
+        if (imgBase64) {
+          try {
+            const imageId = workbook.addImage({ base64: imgBase64, extension: 'jpeg' });
+            sheet.addImage(imageId, { tl: { col: 4 + n + ni, row: r - 1 }, ext: { width: 60, height: 60 } });
+          } catch(e) {}
+        }
+      });
+
+      if (row.refImage) {
+        try {
+          const refImageId = workbook.addImage({ base64: row.refImage, extension: 'jpeg' });
+          sheet.addImage(refImageId, { tl: { col: 4 + 2 * n, row: r - 1 }, ext: { width: 80, height: 80 } });
+        } catch(e) {}
+      }
+    }
+    r++;
+  });
+  r++;
+
+  // 3. CLIP & BĂNG DÍNH
+  sheet.mergeCells(r, 1, r, maxColNum);
+  let extraTitle = sheet.getCell(r, 1);
+  extraTitle.value = 'III. KIỂM TRA CLIP & BĂNG DÍNH';
+  extraTitle.font = { bold: true, size: 12, color: { argb: 'FF1A2744' } };
+  extraTitle.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF0A500' } };
+  applyBorder(extraTitle);
+  r++;
+
+  let extraHeaders = ['Loại vật tư', 'Vị trí', 'Số lượng/Vòng'];
+  for(let i=1; i<=n; i++) extraHeaders.push(''); 
+  extraHeaders.push('Kết quả');
+  for(let i=1; i<=n; i++) extraHeaders.push(''); 
+  extraHeaders.push('Ảnh mẫu (Admin)');
+  
+  let extraHRow = sheet.getRow(r);
+  extraHRow.values = extraHeaders;
+  extraHRow.font = { bold: true };
+  
+  if (n >= 1) {
+    sheet.mergeCells(r, 4, r, 3 + n);
+    sheet.mergeCells(r, 5 + n, r, 4 + 2 * n);
+  }
+  
+  for(let c=1; c<=maxColNum; c++) {
+    let cell = extraHRow.getCell(c);
+    applyBorder(cell);
+    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE8EDF5' } };
+  }
+  r++;
+
+  clipRows.forEach(row => {
+    let dataRow = sheet.getRow(r);
+    dataRow.getCell(1).value = `[Clip] ${row.name}`;
+    dataRow.getCell(2).value = row.pos;
+    dataRow.getCell(3).value = row.qty_yc;
+    
+    if (n >= 1) {
+        sheet.mergeCells(r, 4, r, 3 + n);
+        sheet.mergeCells(r, 5 + n, r, 4 + 2 * n);
+    }
+    
+    let res = row.result === true ? 'ĐẠT' : (row.result === false ? 'NG' : '');
+    let resCell = dataRow.getCell(4 + n);
+    resCell.value = res;
+    resCell.font = { bold: true, color: { argb: res === 'ĐẠT' ? 'FF1DB954' : 'FFE63946' } };
+    resCell.alignment = { horizontal: 'center' };
+
+    for(let c=1; c<=maxColNum; c++) applyBorder(dataRow.getCell(c));
+    
+    if (row.refImage) {
+      try {
+        const imageId = workbook.addImage({ base64: row.refImage, extension: 'jpeg' });
+        sheet.addImage(imageId, { tl: { col: 4 + 2 * n, row: r - 1 }, ext: { width: 80, height: 80 } });
+        dataRow.height = 90;
+      } catch(e){}
+    }
+    r++;
+  });
+
+  tapeRows.forEach(row => {
+    let dataRow = sheet.getRow(r);
+    dataRow.getCell(1).value = `[Băng dính] ${row.name}`;
+    dataRow.getCell(2).value = row.pos;
+    dataRow.getCell(3).value = row.vong_yc;
+    
+    if (n >= 1) {
+        sheet.mergeCells(r, 4, r, 3 + n);
+        sheet.mergeCells(r, 5 + n, r, 4 + 2 * n);
+    }
+    
+    let res = row.result === true ? 'ĐẠT' : (row.result === false ? 'NG' : '');
+    let resCell = dataRow.getCell(4 + n);
+    resCell.value = res;
+    resCell.font = { bold: true, color: { argb: res === 'ĐẠT' ? 'FF1DB954' : 'FFE63946' } };
+    resCell.alignment = { horizontal: 'center' };
+
+    for(let c=1; c<=maxColNum; c++) applyBorder(dataRow.getCell(c));
+    
+    if (row.refImage) {
+      try {
+        const imageId = workbook.addImage({ base64: row.refImage, extension: 'jpeg' });
+        sheet.addImage(imageId, { tl: { col: 4 + 2 * n, row: r - 1 }, ext: { width: 80, height: 80 } });
+        dataRow.height = 90;
+      } catch(e){}
+    }
+    r++;
+  });
+  r++;
+
+  // 4. GHI CHÚ
+  sheet.mergeCells(r, 1, r, maxColNum);
+  let noteTitle = sheet.getCell(r, 1);
+  noteTitle.value = 'IV. GHI CHÚ / YÊU CẦU KHÁC';
+  noteTitle.font = { bold: true, size: 12 };
+  noteTitle.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF0A500' } };
+  applyBorder(noteTitle);
+  r++;
+
+  const note = document.getElementById("ghi-chu").value;
+  sheet.mergeCells(r, 1, r+2, maxColNum);
+  let noteCell = sheet.getCell(r, 1);
+  noteCell.value = note || 'Không có ghi chú.';
+  noteCell.alignment = { vertical: 'top', wrapText: true };
+  applyBorder(noteCell);
+
+  // ──────────────── LƯU VÀ GỬI TELEGRAM ────────────────
+  const khSearch = infoRows.find(item => item.label.toLowerCase().includes("khách"))?.value || "Khach";
+  const slSearch = getNumSamples();
+  let filename = `QC_Checklist_${khSearch}_SL${slSearch}.xlsx`;
+
+  const buffer = await workbook.xlsx.writeBuffer();
+  const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+
+  showToast("⏳ Đang đóng gói và gửi cho Quản lý...");
+
+  const BOT_TOKEN = "8716815549:AAGL2Ln7y5jblqcR3jHOtgDackDniXtLpgo"; 
+  const CHAT_ID = "5797373205";
+
+  const formData = new FormData();
+  formData.append("chat_id", CHAT_ID);
+  formData.append("document", blob, filename);
+  
+  const captionText = `🚨 BÁO CÁO QC MỚI\n📌 Khách hàng: ${khSearch}\n📦 Số lượng mẫu: ${slSearch}\n⏰ Thời gian: ${new Date().toLocaleString('vi-VN')}`;
+  formData.append("caption", captionText);
+
+  try {
+    const response = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendDocument`, {
+      method: "POST",
+      body: formData
+    });
+    
+    if (response.ok) {
+      showToast("✅ Đã gửi báo cáo thành công cho Quản lý!");
+    } else {
+      showToast("❌ Gửi thất bại, vui lòng kiểm tra kết nối mạng!");
+    }
+  } catch (error) {
+    showToast("❌ Lỗi mạng, không thể gửi file!");
+    console.error(error);
+  }
+}
+
+// ── RESET ──────────────────────────────────────────────────────────────────
+function resetAll() {
+  if (!confirm("Tạo phiếu mới? Dữ liệu điền hiện tại sẽ bị xóa (Giữ nguyên cấu hình và ảnh mẫu của Admin).")) return;
+  
+  infoRows.forEach(row => {
+    if(row.type === 'date') row.value = new Date().toISOString().slice(0,10);
+    else row.value = "";
+  });
+  
+  const initSamples = getNumSamples();
+  dimRows.forEach(row => {
+    row.measures = Array(initSamples).fill("");
+    row.images = Array(initSamples).fill(null); 
+  });
+  
+  clipRows.forEach(c => c.result = null);
+  tapeRows.forEach(t => t.result = null);
+  
+  document.getElementById("ghi-chu").value = "";
+  
+  renderInfo();
+  renderDims(); 
+  renderClips(); 
+  renderTapes();
+  
+  goPage(0);
+  showToast("🆕 Đã tạo phiếu mới");
+}
+
+// ── TOAST ──────────────────────────────────────────────────────────────────
+function showToast(msg) {
+  const t = document.getElementById("toast");
+  t.textContent = msg; t.classList.add("show");
+  setTimeout(() => t.classList.remove("show"), 2500);
+}
+</script>
+</body>
+</html>
