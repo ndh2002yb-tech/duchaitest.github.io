@@ -534,13 +534,12 @@ const DEFAULT_INFO = [
   { label: "Ngày", type: "date", value: "" }
 ];
 
-const DEFAULT_DIMS = [
-  { name: "Chiều dài tổng thể (A)", std: "", sai_so: "2" },
-  { name: "Chiều dài đoạn B",       std: "", sai_so: "2" },
-  { name: "Chiều dài đoạn C",       std: "", sai_so: "2" },
-  { name: "Chiều dài đuôi dây đầu 1", std: "", sai_so: "1" },
-  { name: "Chiều dài đuôi dây đầu 2", std: "", sai_so: "1" },
-];
+// Khởi tạo tự động 50 dòng kích thước, Tên từ 1 đến 50, Sai số mặc định = 5
+const DEFAULT_DIMS = Array.from({ length: 50 }, (_, i) => ({
+  name: (i + 1).toString(),
+  std: "",
+  sai_so: "5"
+}));
 
 const DEFAULT_CLIPS = [
   { name: "Clip loại A", pos: "", qty_yc: "", result: null },
@@ -837,11 +836,9 @@ function startQRScanner(index) {
   document.getElementById('qr-modal').classList.add('active');
 
   if (!html5QrCode) {
-    // Gọi trực tiếp thư viện thay vì dùng thẻ Scanner UI rườm rà
     html5QrCode = new Html5Qrcode("qr-reader");
   }
 
-  // Khởi động Camera Sau (environment)
   html5QrCode.start(
     { facingMode: "environment" },
     {
@@ -850,7 +847,6 @@ function startQRScanner(index) {
       aspectRatio: 1.0
     },
     (decodedText, decodedResult) => {
-      // Khi quét thành công
       if (currentScanIndex !== -1) {
         sampleQRs[currentScanIndex] = decodedText;
         const inputEl = document.getElementById(`qr-input-${currentScanIndex}`);
@@ -860,9 +856,7 @@ function startQRScanner(index) {
       }
       stopQRScanner();
     },
-    (errorMessage) => {
-      // Đang quét nhưng chưa thấy mã (bỏ qua log rác)
-    }
+    (errorMessage) => { }
   ).catch(err => {
     console.error("Lỗi khi mở camera", err);
     alert("❌ Không thể mở Camera sau. Vui lòng cấp quyền truy cập Camera cho trình duyệt điện thoại!");
@@ -1109,7 +1103,7 @@ function renderAdminDims() {
 
 function addDimRow() {
   const initSamples = getNumSamples();
-  dimRows.push({ name: "Kích thước mới", std: "", sai_so: "2", measures: Array(initSamples).fill(""), images: Array(initSamples).fill(null), refImage: null });
+  dimRows.push({ name: "Kích thước mới", std: "", sai_so: "5", measures: Array(initSamples).fill(""), images: Array(initSamples).fill(null), refImage: null });
   renderAdminDims();
   showToast("Đã thêm kích thước");
 }
@@ -1439,9 +1433,9 @@ async function exportResult() {
   r++;
 
   let dimHeaders = ['Tên kích thước', 'Tiêu chuẩn (mm)', 'Sai số (+mm)'];
-  for(let i=1; i<=n; i++) dimHeaders.push(sampleQRs[i-1] || `NO.${i}`); // Tiêu đề cột đổi theo QR
+  for(let i=1; i<=n; i++) dimHeaders.push(sampleQRs[i-1] || `NO.${i}`); 
   dimHeaders.push('Kết quả');
-  for(let i=1; i<=n; i++) dimHeaders.push(`Ảnh ${sampleQRs[i-1] || 'NO.'+i}`); // Tiêu đề ảnh đổi theo QR
+  for(let i=1; i<=n; i++) dimHeaders.push(`Ảnh ${sampleQRs[i-1] || 'NO.'+i}`); 
   dimHeaders.push('Ảnh mẫu (Admin)');
   
   const headerRow = sheet.getRow(r);
@@ -1632,6 +1626,54 @@ async function exportResult() {
   noteCell.value = note || 'Không có ghi chú.';
   noteCell.alignment = { vertical: 'top', wrapText: true };
   applyBorder(noteCell);
+  
+  r += 4; 
+
+  // 5. XÁC NHẬN & CHỮ KÝ
+  sheet.mergeCells(r, 1, r, maxColNum);
+  let sigTitle = sheet.getCell(r, 1);
+  sigTitle.value = 'XÁC NHẬN & CHỮ KÝ';
+  sigTitle.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+  sigTitle.alignment = { horizontal: 'center', vertical: 'middle' };
+  sigTitle.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1A2744' } }; 
+  applyBorder(sigTitle);
+  r++;
+
+  let colBase = Math.floor(maxColNum / 4);
+  let rem = maxColNum % 4;
+  let w1 = colBase + (rem > 0 ? 1 : 0);
+  let w2 = colBase + (rem > 1 ? 1 : 0);
+  let w3 = colBase + (rem > 2 ? 1 : 0);
+  let w4 = colBase;
+
+  let c1 = 1, c2 = c1 + w1, c3 = c2 + w2, c4 = c3 + w3;
+
+  sheet.mergeCells(r, c1, r, c2 - 1);
+  sheet.mergeCells(r, c2, r, c3 - 1);
+  sheet.mergeCells(r, c3, r, c4 - 1);
+  sheet.mergeCells(r, c4, r, maxColNum);
+
+  let sigHeaders = ['Nhân viên thực hiện', 'Tổ trưởng / Leader', 'QC kiểm tra', 'Phê duyệt'];
+  let headerCells = [sheet.getCell(r, c1), sheet.getCell(r, c2), sheet.getCell(r, c3), sheet.getCell(r, c4)];
+  
+  headerCells.forEach((cell, i) => {
+    cell.value = sigHeaders[i];
+    cell.font = { bold: true };
+    cell.alignment = { horizontal: 'center', vertical: 'middle' };
+    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD9E1F2' } }; 
+  });
+
+  for(let c=1; c<=maxColNum; c++) applyBorder(sheet.getCell(r, c));
+  r++;
+
+  sheet.getRow(r).height = 70; 
+  sheet.mergeCells(r, c1, r, c2 - 1);
+  sheet.mergeCells(r, c2, r, c3 - 1);
+  sheet.mergeCells(r, c3, r, c4 - 1);
+  sheet.mergeCells(r, c4, r, maxColNum);
+
+  for(let c=1; c<=maxColNum; c++) applyBorder(sheet.getCell(r, c));
+  r++;
 
   // ──────────────── LƯU VÀ GỬI TELEGRAM ────────────────
   const khSearch = infoRows.find(item => item.label.toLowerCase().includes("khách"))?.value || "Khach";
@@ -1680,7 +1722,7 @@ function resetAll() {
   });
   
   const initSamples = getNumSamples();
-  sampleQRs = Array(initSamples).fill(""); // Reset QR
+  sampleQRs = Array(initSamples).fill(""); 
   
   dimRows.forEach(row => {
     row.measures = Array(initSamples).fill("");
