@@ -534,11 +534,12 @@ const DEFAULT_INFO = [
   { label: "Ngày", type: "date", value: "" }
 ];
 
-// Khởi tạo tự động 50 dòng kích thước, Tên từ 1 đến 50, Sai số mặc định = 5
+// Khởi tạo tự động 50 dòng kích thước, Tên từ 1 đến 50, Dung sai trên/dưới mặc định = 5
 const DEFAULT_DIMS = Array.from({ length: 50 }, (_, i) => ({
   name: (i + 1).toString(),
   std: "",
-  sai_so: "5"
+  sai_so_duong: "5",
+  sai_so_am: "5"
 }));
 
 const DEFAULT_CLIPS = [
@@ -576,7 +577,13 @@ document.addEventListener("DOMContentLoaded", () => {
     
     const initSamples = getNumSamples();
     sampleQRs = Array(initSamples).fill("");
-    dimRows = embeddedConfig.dimRows.map(d => ({ ...d, measures: Array(initSamples).fill(""), images: Array(initSamples).fill(null) }));
+    dimRows = embeddedConfig.dimRows.map(d => ({ 
+      ...d, 
+      sai_so_duong: d.sai_so_duong !== undefined ? d.sai_so_duong : (d.sai_so || "5"),
+      sai_so_am: d.sai_so_am !== undefined ? d.sai_so_am : (d.sai_so || "5"),
+      measures: Array(initSamples).fill(""), 
+      images: Array(initSamples).fill(null) 
+    }));
     clipRows = embeddedConfig.clipRows.map(c => ({ ...c, result: null }));
     tapeRows = embeddedConfig.tapeRows.map(t => ({ ...t, result: null }));
   } else {
@@ -601,7 +608,7 @@ document.addEventListener("DOMContentLoaded", () => {
 function exportConfiguredHTML() {
   const exportConfig = {
       infoRows: infoRows.map(r => ({ label: r.label, type: r.type, value: r.type === 'date' ? '' : r.value })), 
-      dimRows: dimRows.map(r => ({ name: r.name, std: r.std, sai_so: r.sai_so, refImage: r.refImage })),
+      dimRows: dimRows.map(r => ({ name: r.name, std: r.std, sai_so_duong: r.sai_so_duong, sai_so_am: r.sai_so_am, refImage: r.refImage })),
       clipRows: clipRows.map(r => ({ name: r.name, pos: r.pos, qty_yc: r.qty_yc, refImage: r.refImage })),
       tapeRows: tapeRows.map(r => ({ name: r.name, color: r.color, pos: r.pos, vong_yc: r.vong_yc, refImage: r.refImage }))
   };
@@ -985,8 +992,8 @@ function renderDims() {
           <div style="font-size:13px;color:var(--amber);font-family:'IBM Plex Mono',monospace;font-weight:bold;">${row.std || "—"} mm</div>
         </div>
         <div style="flex:1;">
-          <div style="font-size:10px;color:var(--text2);font-weight:600;text-transform:uppercase;letter-spacing:.5px;">Sai số (+)</div>
-          <div style="font-size:13px;color:var(--text);font-family:'IBM Plex Mono',monospace;">${row.sai_so || "0"} mm</div>
+          <div style="font-size:10px;color:var(--text2);font-weight:600;text-transform:uppercase;letter-spacing:.5px;">Dung sai</div>
+          <div style="font-size:13px;color:var(--text);font-family:'IBM Plex Mono',monospace;">+${row.sai_so_duong || "0"} / -${row.sai_so_am || "0"}</div>
         </div>
       </div>
       
@@ -1025,7 +1032,8 @@ function updateSingleResult(ri, ni, inputEl) {
   if (!badge) return;
   const val = parseFloat(row.measures[ni]);
   const std = parseFloat(row.std);
-  const sai = parseFloat(row.sai_so) || 0;
+  const sai_duong = parseFloat(row.sai_so_duong) || 0;
+  const sai_am = parseFloat(row.sai_so_am) || 0;
   
   if (isNaN(val) || row.measures[ni] === "" || isNaN(std) || row.std === "") {
     badge.className = "result-badge empty"; 
@@ -1038,7 +1046,7 @@ function updateSingleResult(ri, ni, inputEl) {
     return;
   }
   
-  const ok = val >= std && val <= std + sai;
+  const ok = val >= (std - sai_am) && val <= (std + sai_duong);
   badge.className = "result-badge " + (ok ? "ok" : "ng");
   badge.textContent = ok ? "✅ OK" : "❌ NG";
 
@@ -1080,10 +1088,16 @@ function renderAdminDims() {
             onchange="dimRows[${ri}].std=this.value">
         </div>
         <div style="flex:1;">
-          <div style="font-size:10px; color:var(--text2); margin-bottom: 4px;">Sai số (+mm)</div>
-          <input type="number" value="${row.sai_so}" placeholder="Ví dụ: 2"
+          <div style="font-size:10px; color:var(--text2); margin-bottom: 4px;">Dung sai trên (+)</div>
+          <input type="number" value="${row.sai_so_duong}" placeholder="Ví dụ: 5"
             style="width:100%; background:var(--surface); border:1px solid var(--border); border-radius:4px; padding:8px 10px; font-size:13px; color:var(--text); outline:none; font-family:'IBM Plex Mono',monospace;"
-            onchange="dimRows[${ri}].sai_so=this.value">
+            onchange="dimRows[${ri}].sai_so_duong=this.value">
+        </div>
+        <div style="flex:1;">
+          <div style="font-size:10px; color:var(--text2); margin-bottom: 4px;">Dung sai dưới (-)</div>
+          <input type="number" value="${row.sai_so_am}" placeholder="Ví dụ: 5"
+            style="width:100%; background:var(--surface); border:1px solid var(--border); border-radius:4px; padding:8px 10px; font-size:13px; color:var(--text); outline:none; font-family:'IBM Plex Mono',monospace;"
+            onchange="dimRows[${ri}].sai_so_am=this.value">
         </div>
       </div>
       <div style="display: flex; gap: 8px; margin-top: 8px; border-top: 1px dashed var(--border); padding-top: 8px;">
@@ -1103,7 +1117,7 @@ function renderAdminDims() {
 
 function addDimRow() {
   const initSamples = getNumSamples();
-  dimRows.push({ name: "Kích thước mới", std: "", sai_so: "5", measures: Array(initSamples).fill(""), images: Array(initSamples).fill(null), refImage: null });
+  dimRows.push({ name: "Kích thước mới", std: "", sai_so_duong: "5", sai_so_am: "5", measures: Array(initSamples).fill(""), images: Array(initSamples).fill(null), refImage: null });
   renderAdminDims();
   showToast("Đã thêm kích thước");
 }
@@ -1317,17 +1331,20 @@ function calcResult() {
 
   dimRows.forEach(row => {
     const std = parseFloat(row.std);
-    const sai = parseFloat(row.sai_so) || 0;
+    const sai_duong = parseFloat(row.sai_so_duong) || 0;
+    const sai_am = parseFloat(row.sai_so_am) || 0;
     if (isNaN(std)) return;
+    
     row.measures.forEach((m, ni) => {
       const val = parseFloat(m);
       if (isNaN(val) || m === "") return;
-      const ok = val >= std && val <= std + sai;
+      
+      const ok = val >= (std - sai_am) && val <= (std + sai_duong);
       if (ok) okCount++;
       else { 
         const sampleName = sampleQRs[ni] || `NO.${ni+1}`;
         ngCount++; 
-        ngDetails.push(`${row.name} – ${sampleName}: ${val}mm (TC: ${std}mm +${sai}mm)`); 
+        ngDetails.push(`${row.name} – ${sampleName}: ${val}mm (TC: ${std} +${sai_duong}/-${sai_am})`); 
       }
     });
   });
@@ -1378,7 +1395,7 @@ async function exportResult() {
   const n = getNumSamples();
   const maxColNum = 2 * n + 5; 
 
-  let excelCols = [{ width: 28 }, { width: 14 }, { width: 14 }];
+  let excelCols = [{ width: 28 }, { width: 14 }, { width: 16 }];
   for(let i=0; i<n; i++) excelCols.push({ width: 10 }); 
   excelCols.push({ width: 12 }); 
   for(let i=0; i<n; i++) excelCols.push({ width: 16 }); 
@@ -1432,7 +1449,7 @@ async function exportResult() {
   applyBorder(dimTitle);
   r++;
 
-  let dimHeaders = ['Tên kích thước', 'Tiêu chuẩn (mm)', 'Sai số (+mm)'];
+  let dimHeaders = ['Tên kích thước', 'Tiêu chuẩn (mm)', 'Dung sai (+ / -)'];
   for(let i=1; i<=n; i++) dimHeaders.push(sampleQRs[i-1] || `NO.${i}`); 
   dimHeaders.push('Kết quả');
   for(let i=1; i<=n; i++) dimHeaders.push(`Ảnh ${sampleQRs[i-1] || 'NO.'+i}`); 
@@ -1449,7 +1466,7 @@ async function exportResult() {
   r++;
 
   dimRows.forEach(row => {
-    let rowData = [row.name, row.std, row.sai_so];
+    let rowData = [row.name, row.std, `+${row.sai_so_duong || "0"} / -${row.sai_so_am || "0"}`];
     let okCount = 0, totalCount = 0;
     let measureResults = []; 
     
@@ -1457,8 +1474,10 @@ async function exportResult() {
       let val = parseFloat(m);
       if (!isNaN(val)) {
         rowData.push(val); totalCount++;
-        let std = parseFloat(row.std), sai = parseFloat(row.sai_so) || 0;
-        let isOk = (val >= std && val <= std + sai);
+        let std = parseFloat(row.std);
+        let sai_duong = parseFloat(row.sai_so_duong) || 0;
+        let sai_am = parseFloat(row.sai_so_am) || 0;
+        let isOk = (val >= (std - sai_am) && val <= (std + sai_duong));
         if (isOk) okCount++;
         measureResults.push(isOk);
       } else {
@@ -1722,7 +1741,7 @@ function resetAll() {
   });
   
   const initSamples = getNumSamples();
-  sampleQRs = Array(initSamples).fill(""); 
+  sampleQRs = Array(initSamples).fill(""); // Reset QR
   
   dimRows.forEach(row => {
     row.measures = Array(initSamples).fill("");
