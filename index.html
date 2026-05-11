@@ -11,8 +11,9 @@
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&amp;family=IBM+Plex+Mono:wght@400;600&amp;display=swap" rel="stylesheet">
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
+<script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
 
-<script id="app-config" type="application/json">{"infoRows":[{"label":"Khách hàng","type":"text","value":""},{"label":"Số lượng mẫu","type":"number","value":"5"},{"label":"Nhân viên thực hiện","type":"text","value":""},{"label":"Ngày","type":"date","value":""}],"dimRows":[{"name":"Chiều dài tổng thể (A)","std":"10","sai_so":"2","refImage":null}],"clipRows":[{"name":"Clip loại A","pos":"","qty_yc":"","refImage":null}],"tapeRows":[{"name":"Băng vàng","color":"#f0a500","pos":"","vong_yc":"","refImage":null},{"name":"Băng đỏ","color":"#e63946","pos":"","vong_yc":"","refImage":null},{"name":"Băng trắng","color":"#e8edf5","pos":"","vong_yc":"","refImage":null}]}</script>
+<script id="app-config" type="application/json">{"infoRows":[{"label":"Khách hàng","type":"text","value":""},{"label":"Mã bản vẽ","type":"text","value":""},{"label":"Số lượng mẫu","type":"number","value":"5"},{"label":"Nhân viên thực hiện","type":"text","value":""},{"label":"Ngày","type":"date","value":""}],"dimRows":[{"name":"Chiều dài tổng thể (A)","std":"100","sai_so":"5","refImage":null}],"clipRows":[{"name":"Clip loại A","pos":"","qty_yc":"","refImage":null}],"tapeRows":[{"name":"Băng vàng","color":"#f0a500","pos":"","vong_yc":"","refImage":null},{"name":"Băng đỏ","color":"#e63946","pos":"","vong_yc":"","refImage":null},{"name":"Băng trắng","color":"#e8edf5","pos":"","vong_yc":"","refImage":null}]}</script>
 
 <style>
   :root {
@@ -178,8 +179,9 @@
   .measure-cell .no-label {
     font-size: 10px; color: var(--text2); font-weight: 600;
     margin-bottom: 2px; font-family: 'IBM Plex Mono', monospace;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%;
   }
-  .measure-cell input[type="number"] {
+  .measure-cell input[type="number"], .measure-cell input[type="text"] {
     width: 100%; text-align: center;
     background: var(--surface2);
     border: 1.5px solid var(--border);
@@ -189,7 +191,7 @@
     font-family: 'IBM Plex Mono', monospace;
     outline: none; transition: border-color .2s, background-color .2s;
   }
-  .measure-cell input[type="number"]:focus { border-color: var(--amber); }
+  .measure-cell input:focus { border-color: var(--amber); }
   .measure-cell .result-badge {
     font-size: 10px; font-weight: 700;
     padding: 2px 4px; border-radius: 4px;
@@ -330,6 +332,22 @@
     padding: 12px 16px; margin-top: 8px;
   }
   .nav-bottom .btn { max-width: 140px; padding: 12px; font-size: 14px; }
+
+  /* ── QR SCANNER MODAL ── */
+  #qr-modal {
+    display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.9); z-index: 9999; flex-direction: column; align-items: center; justify-content: center;
+  }
+  #qr-modal.active { display: flex; }
+  #qr-reader { 
+    width: 90%; max-width: 400px; background: #fff; color: #000; border-radius: 12px; overflow: hidden;
+  }
+  #qr-reader * { color: #000 !important; font-family: 'IBM Plex Sans', sans-serif; }
+  #qr-reader a { color: #2e5bba !important; }
+  .btn-close-qr { 
+    margin-top: 20px; padding: 12px 24px; background: var(--red); color: white; border: none; 
+    border-radius: 8px; font-weight: bold; font-size: 15px; cursor: pointer;
+  }
 </style>
 </head>
 <body>
@@ -379,7 +397,10 @@
 <div class="page" id="page1">
 <div class="content">
 
-  <div class="section-title">Danh sách kích thước</div>
+  <div class="section-title">Mã QR / ID Từng Mẫu</div>
+  <div id="qr-list"></div>
+
+  <div class="section-title" style="margin-top: 24px;">Danh sách kích thước</div>
   <div id="dim-list"></div>
 
   <div class="nav-bottom" style="padding:0;margin-top:16px;">
@@ -465,35 +486,45 @@
       
       <button onclick="removeInfo(0)" title="Xoá" style="background:var(--red-bg); border:1px solid var(--red); color:var(--red); border-radius:4px; padding:8px 12px; cursor:pointer; font-weight:bold;">✕</button>
     </div><div class="admin-row">
-      <input type="text" value="Số lượng mẫu" placeholder="Tên trường..." style="flex:1; background:var(--surface); border:1px solid var(--border); border-radius:4px; padding:8px 10px; font-size:13px; color:var(--text); outline:none; font-family:'IBM Plex Sans',sans-serif;" onchange="infoRows[1].label=this.value">
+      <input type="text" value="Mã bản vẽ" placeholder="Tên trường..." style="flex:1; background:var(--surface); border:1px solid var(--border); border-radius:4px; padding:8px 10px; font-size:13px; color:var(--text); outline:none; font-family:'IBM Plex Sans',sans-serif;" onchange="infoRows[1].label=this.value">
       
       <select style="background:var(--surface); border:1px solid var(--border); border-radius:4px; padding:8px; font-size:13px; color:var(--text); outline:none; font-family:'IBM Plex Sans',sans-serif;" onchange="infoRows[1].type=this.value">
-        <option value="text">Chữ</option>
-        <option value="number" selected="">Số</option>
-        <option value="date">Ngày</option>
-      </select>
-      
-      <button onclick="removeInfo(1)" title="Xoá" style="background:var(--red-bg); border:1px solid var(--red); color:var(--red); border-radius:4px; padding:8px 12px; cursor:pointer; font-weight:bold;">✕</button>
-    </div><div class="admin-row">
-      <input type="text" value="Nhân viên thực hiện" placeholder="Tên trường..." style="flex:1; background:var(--surface); border:1px solid var(--border); border-radius:4px; padding:8px 10px; font-size:13px; color:var(--text); outline:none; font-family:'IBM Plex Sans',sans-serif;" onchange="infoRows[2].label=this.value">
-      
-      <select style="background:var(--surface); border:1px solid var(--border); border-radius:4px; padding:8px; font-size:13px; color:var(--text); outline:none; font-family:'IBM Plex Sans',sans-serif;" onchange="infoRows[2].type=this.value">
         <option value="text" selected="">Chữ</option>
         <option value="number">Số</option>
         <option value="date">Ngày</option>
       </select>
       
+      <button onclick="removeInfo(1)" title="Xoá" style="background:var(--red-bg); border:1px solid var(--red); color:var(--red); border-radius:4px; padding:8px 12px; cursor:pointer; font-weight:bold;">✕</button>
+    </div><div class="admin-row">
+      <input type="text" value="Số lượng mẫu" placeholder="Tên trường..." style="flex:1; background:var(--surface); border:1px solid var(--border); border-radius:4px; padding:8px 10px; font-size:13px; color:var(--text); outline:none; font-family:'IBM Plex Sans',sans-serif;" onchange="infoRows[2].label=this.value">
+      
+      <select style="background:var(--surface); border:1px solid var(--border); border-radius:4px; padding:8px; font-size:13px; color:var(--text); outline:none; font-family:'IBM Plex Sans',sans-serif;" onchange="infoRows[2].type=this.value">
+        <option value="text">Chữ</option>
+        <option value="number" selected="">Số</option>
+        <option value="date">Ngày</option>
+      </select>
+      
       <button onclick="removeInfo(2)" title="Xoá" style="background:var(--red-bg); border:1px solid var(--red); color:var(--red); border-radius:4px; padding:8px 12px; cursor:pointer; font-weight:bold;">✕</button>
     </div><div class="admin-row">
-      <input type="text" value="Ngày" placeholder="Tên trường..." style="flex:1; background:var(--surface); border:1px solid var(--border); border-radius:4px; padding:8px 10px; font-size:13px; color:var(--text); outline:none; font-family:'IBM Plex Sans',sans-serif;" onchange="infoRows[3].label=this.value">
+      <input type="text" value="Nhân viên thực hiện" placeholder="Tên trường..." style="flex:1; background:var(--surface); border:1px solid var(--border); border-radius:4px; padding:8px 10px; font-size:13px; color:var(--text); outline:none; font-family:'IBM Plex Sans',sans-serif;" onchange="infoRows[3].label=this.value">
       
       <select style="background:var(--surface); border:1px solid var(--border); border-radius:4px; padding:8px; font-size:13px; color:var(--text); outline:none; font-family:'IBM Plex Sans',sans-serif;" onchange="infoRows[3].type=this.value">
+        <option value="text" selected="">Chữ</option>
+        <option value="number">Số</option>
+        <option value="date">Ngày</option>
+      </select>
+      
+      <button onclick="removeInfo(3)" title="Xoá" style="background:var(--red-bg); border:1px solid var(--red); color:var(--red); border-radius:4px; padding:8px 12px; cursor:pointer; font-weight:bold;">✕</button>
+    </div><div class="admin-row">
+      <input type="text" value="Ngày" placeholder="Tên trường..." style="flex:1; background:var(--surface); border:1px solid var(--border); border-radius:4px; padding:8px 10px; font-size:13px; color:var(--text); outline:none; font-family:'IBM Plex Sans',sans-serif;" onchange="infoRows[4].label=this.value">
+      
+      <select style="background:var(--surface); border:1px solid var(--border); border-radius:4px; padding:8px; font-size:13px; color:var(--text); outline:none; font-family:'IBM Plex Sans',sans-serif;" onchange="infoRows[4].type=this.value">
         <option value="text">Chữ</option>
         <option value="number">Số</option>
         <option value="date" selected="">Ngày</option>
       </select>
       
-      <button onclick="removeInfo(3)" title="Xoá" style="background:var(--red-bg); border:1px solid var(--red); color:var(--red); border-radius:4px; padding:8px 12px; cursor:pointer; font-weight:bold;">✕</button>
+      <button onclick="removeInfo(4)" title="Xoá" style="background:var(--red-bg); border:1px solid var(--red); color:var(--red); border-radius:4px; padding:8px 12px; cursor:pointer; font-weight:bold;">✕</button>
     </div></div>
       <button class="add-btn" style="margin-top: 10px;" onclick="addInfoRow()">
         <span style="font-size:18px;">＋</span> Thêm trường mới
@@ -657,6 +688,12 @@
 </div>
 </div>
 
+<div id="qr-modal" class="">
+  <div style="color:#fff; font-size:16px; font-weight:bold; margin-bottom:12px;">Đưa mã QR / Mã vạch vào khung</div>
+  <div id="qr-reader" style="position: relative; padding: 0px; border-width: medium; border-style: none; border-color: currentcolor; border-image: initial;"></div>
+  <button class="btn-close-qr" onclick="stopQRScanner()">Đóng máy ảnh</button>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -666,9 +703,10 @@ const ADMIN_PASS = "103202";
 let currentPage = 0;
 let isAdminMode = false;
 
-// Thông tin mặc định (Nếu file chưa có config nhúng)
+// Thông tin mặc định
 const DEFAULT_INFO = [
   { label: "Khách hàng", type: "text", value: "" },
+  { label: "Mã bản vẽ", type: "text", value: "" }, 
   { label: "Số lượng mẫu", type: "number", value: "5" },
   { label: "Nhân viên thực hiện", type: "text", value: "" },
   { label: "Ngày", type: "date", value: "" }
@@ -697,6 +735,9 @@ let dimRows = [];
 let clipRows = [];
 let tapeRows = [];
 
+// Mảng lưu giá trị QR code của từng mẫu
+let sampleQRs = [];
+
 // ── INIT: LOAD TỪ THẺ SCRIPT (SOURCE OF TRUTH) ─────────────────────────────
 document.addEventListener("DOMContentLoaded", () => {
   const configNode = document.getElementById("app-config");
@@ -713,21 +754,23 @@ document.addEventListener("DOMContentLoaded", () => {
     infoRows.forEach(row => { if(row.type === 'date' && !row.value) row.value = new Date().toISOString().slice(0,10); });
     
     const initSamples = getNumSamples();
+    sampleQRs = Array(initSamples).fill("");
     dimRows = embeddedConfig.dimRows.map(d => ({ ...d, measures: Array(initSamples).fill(""), images: Array(initSamples).fill(null) }));
     clipRows = embeddedConfig.clipRows.map(c => ({ ...c, result: null }));
     tapeRows = embeddedConfig.tapeRows.map(t => ({ ...t, result: null }));
   } else {
-    // Nếu chưa có config nhúng, load mặc định
     infoRows = JSON.parse(JSON.stringify(DEFAULT_INFO));
     infoRows.forEach(row => { if(row.type === 'date' && !row.value) row.value = new Date().toISOString().slice(0,10); });
     
     const initSamples = getNumSamples();
+    sampleQRs = Array(initSamples).fill("");
     dimRows = DEFAULT_DIMS.map(d => ({ ...d, measures: Array(initSamples).fill(""), images: Array(initSamples).fill(null), refImage: null }));
     clipRows = DEFAULT_CLIPS.map(c => ({ ...c, refImage: null }));
     tapeRows = DEFAULT_TAPES.map(t => ({ ...t, refImage: null }));
   }
   
   renderInfo();
+  renderQRs();
   renderDims();
   renderClips();
   renderTapes();
@@ -735,18 +778,15 @@ document.addEventListener("DOMContentLoaded", () => {
 
 // ── XUẤT FILE HTML (TẠO FILE MỚI ĐÃ CHỨA SETUP) ────────────────────────────
 function exportConfiguredHTML() {
-  // 1. Gói thông tin Template hiện tại
   const exportConfig = {
-      infoRows: infoRows.map(r => ({ label: r.label, type: r.type, value: r.type === 'date' ? '' : r.value })), // Reset date
+      infoRows: infoRows.map(r => ({ label: r.label, type: r.type, value: r.type === 'date' ? '' : r.value })), 
       dimRows: dimRows.map(r => ({ name: r.name, std: r.std, sai_so: r.sai_so, refImage: r.refImage })),
       clipRows: clipRows.map(r => ({ name: r.name, pos: r.pos, qty_yc: r.qty_yc, refImage: r.refImage })),
       tapeRows: tapeRows.map(r => ({ name: r.name, color: r.color, pos: r.pos, vong_yc: r.vong_yc, refImage: r.refImage }))
   };
 
-  // 2. Chèn cấu hình vào thẻ script gốc
   document.getElementById("app-config").textContent = JSON.stringify(exportConfig);
 
-  // 3. Xóa các dữ liệu rác trên giao diện DOM trước khi tải file HTML
   document.querySelectorAll(".page").forEach(p => p.classList.remove("active"));
   document.getElementById(`page0`).classList.add("active");
   document.querySelectorAll(".step-btn").forEach((b,i) => {
@@ -754,36 +794,31 @@ function exportConfiguredHTML() {
     if(i === 0) b.classList.add("active");
   });
   
-  // Trả giao diện về chế độ Worker (ẩn Admin)
   document.getElementById("nav-steps").style.display = "flex";
   document.getElementById("progress-badge").style.display = "block";
   document.getElementById("btn-settings").style.color = "";
   document.getElementById("btn-settings").style.transform = "rotate(0deg)";
   document.getElementById("topbar-sub").textContent = "Dây Điện · Điền thông tin đơn hàng";
   
-  // Xóa rỗng các danh sách để file nhẹ hơn, khi mở lên hàm Init sẽ tự sinh ra lại
   document.getElementById("info-list").innerHTML = "";
+  document.getElementById("qr-list").innerHTML = "";
   document.getElementById("dim-list").innerHTML = "";
   document.getElementById("clip-list").innerHTML = "";
   document.getElementById("tape-list").innerHTML = "";
 
-  // 4. Lấy toàn bộ mã HTML sau khi đã nhúng cấu hình
   const htmlContent = "<!DOCTYPE html>\n<html lang=\"vi\">\n" + document.documentElement.innerHTML + "\n</html>";
 
-  // 5. Tải file xuống
   const blob = new Blob([htmlContent], { type: "text/html;charset=utf-8" });
   const a = document.createElement("a");
   a.href = URL.createObjectURL(blob);
   a.download = "Form_QC_Setup_San.html";
   a.click();
 
-  // 6. Reset lại giao diện Admin để dùng tiếp
   showToast("✅ Đã tạo file HTML mới. Hãy gửi file này cho nhân viên!");
   isAdminMode = false;
   goPage(0);
   
-  // Render lại DOM cho màn hình hiện tại
-  renderInfo(); renderDims(); renderClips(); renderTapes();
+  renderInfo(); renderQRs(); renderDims(); renderClips(); renderTapes();
 }
 
 
@@ -798,6 +833,13 @@ function getNumSamples() {
 
 function updateNumSamples() {
   const n = getNumSamples();
+  
+  if (sampleQRs.length < n) {
+    sampleQRs.push(...Array(n - sampleQRs.length).fill(""));
+  } else if (sampleQRs.length > n) {
+    sampleQRs = sampleQRs.slice(0, n);
+  }
+
   dimRows.forEach(row => {
     if (row.measures.length < n) {
       row.measures.push(...Array(n - row.measures.length).fill(""));
@@ -807,6 +849,8 @@ function updateNumSamples() {
       row.images = row.images.slice(0, n);
     }
   });
+  
+  renderQRs();
   renderDims(); 
 }
 
@@ -871,6 +915,7 @@ function toggleAdmin() {
     btnSettings.style.transform = "rotate(0deg)";
     
     renderInfo(); 
+    renderQRs();
     renderDims();
     renderClips();
     renderTapes();
@@ -960,7 +1005,88 @@ function renderAdminInfo() {
 function addInfoRow() { infoRows.push({ label: "Trường dữ liệu mới", type: "text", value: "" }); renderAdminInfo(); showToast("Đã thêm trường mới"); }
 function removeInfo(ri) { if(!confirm("Bạn có chắc muốn xoá trường này?")) return; infoRows.splice(ri, 1); renderAdminInfo(); }
 
-// ── XỬ LÝ CHỤP ẢNH CỦA NHÂN VIÊN ───────────────────────────────────────────
+
+// ── MỞ CAMERA QUÉT QR / BARCODE ────────────────────────────────────────────
+let html5QrcodeScanner = null;
+let currentScanIndex = -1;
+
+function startQRScanner(index) {
+  currentScanIndex = index;
+  document.getElementById('qr-modal').classList.add('active');
+  
+  html5QrcodeScanner = new Html5QrcodeScanner(
+    "qr-reader", 
+    { fps: 10, qrbox: {width: 250, height: 250}, aspectRatio: 1.0 }, 
+    /* verbose= */ false
+  );
+  
+  html5QrcodeScanner.render(onScanSuccess, onScanFailure);
+}
+
+function onScanSuccess(decodedText, decodedResult) {
+  if (currentScanIndex !== -1) {
+    sampleQRs[currentScanIndex] = decodedText;
+    const inputEl = document.getElementById(`qr-input-${currentScanIndex}`);
+    if (inputEl) inputEl.value = decodedText;
+    updateQRLabels();
+    showToast("✅ Nhận dạng thành công: " + decodedText);
+  }
+  stopQRScanner();
+}
+
+function onScanFailure(error) {
+  // Bỏ qua lỗi rác khi chưa nhận được mã
+}
+
+function stopQRScanner() {
+  if (html5QrcodeScanner) {
+    html5QrcodeScanner.clear().catch(error => {
+      console.error("Lỗi khi tắt máy ảnh", error);
+    });
+    html5QrcodeScanner = null;
+  }
+  document.getElementById('qr-modal').classList.remove('active');
+  currentScanIndex = -1;
+}
+
+// ── QUÉT MÃ QR (GIAO DIỆN NHÂN VIÊN) ───────────────────────────────────────
+function renderQRs() {
+  const list = document.getElementById("qr-list");
+  if (!list) return;
+  const n = getNumSamples();
+  const gridCols = n > 5 ? 5 : n;
+  
+  list.innerHTML = `
+    <div class="measure-grid" style="display: grid; grid-template-columns: repeat(${gridCols}, 1fr); gap: 6px;">
+      ${Array.from({length: n}, (_, i) => `
+        <div class="measure-cell" style="background: rgba(240, 165, 0, 0.05); border-color: var(--amber); padding: 8px;">
+          <div class="no-label" style="color: var(--amber); margin-bottom: 6px;">MẪU ${i+1}</div>
+          <div style="display:flex; width:100%; gap:4px; height: 32px;">
+            <input type="text" placeholder="Nhập/Quét..." value="${sampleQRs[i]}" id="qr-input-${i}"
+              style="flex:1; min-width:0; text-align:center; background:var(--surface2); border:1.5px solid var(--border); border-radius:6px; font-size:12px; color:var(--text); outline:none;"
+              oninput="sampleQRs[${i}]=this.value; updateQRLabels();">
+            <button onclick="startQRScanner(${i})" style="background:var(--amber); color:var(--navy); border:none; border-radius:6px; padding:0 10px; cursor:pointer; font-size: 16px; font-weight: bold; flex-shrink: 0;" title="Mở máy ảnh quét mã">📷</button>
+          </div>
+        </div>
+      `).join("")}
+    </div>
+  `;
+}
+
+function updateQRLabels() {
+  const n = getNumSamples();
+  for(let ri = 0; ri < dimRows.length; ri++) {
+    for(let ni = 0; ni < n; ni++) {
+      const lbl = document.getElementById(`lbl-${ri}-${ni}`);
+      if (lbl) {
+        lbl.textContent = sampleQRs[ni] || `NO.${ni+1}`;
+        lbl.style.color = sampleQRs[ni] ? "var(--amber)" : "var(--text2)";
+      }
+    }
+  }
+}
+
+// ── XỬ LÝ CHỤP ẢNH KÍCH THƯỚC (CỦA NHÂN VIÊN) ──────────────────────────────
 function handleImageUpload(ri, ni, input) {
   const file = input.files[0];
   if (!file) return;
@@ -1037,7 +1163,7 @@ function renderDims() {
       <div class="measure-grid" id="mg-${ri}" style="display: grid; grid-template-columns: repeat(${gridCols}, 1fr); gap: 6px;">
         ${Array.from({length: numSamples}, (_,ni)=>`
           <div class="measure-cell">
-            <div class="no-label">NO.${ni+1}</div>
+            <div class="no-label" id="lbl-${ri}-${ni}" style="color: ${sampleQRs[ni] ? 'var(--amber)' : 'var(--text2)'};">${sampleQRs[ni] || 'NO.'+(ni+1)}</div>
             <input type="number" placeholder="—" value="${row.measures[ni] || ''}"
               oninput="dimRows[${ri}].measures[${ni}]=this.value;updateSingleResult(${ri},${ni},this)">
             <div class="result-badge empty" id="rb-${ri}-${ni}"></div>
@@ -1368,7 +1494,11 @@ function calcResult() {
       if (isNaN(val) || m === "") return;
       const ok = val >= std && val <= std + sai;
       if (ok) okCount++;
-      else { ngCount++; ngDetails.push(`${row.name} – NO.${ni+1}: ${val}mm (TC: ${std}mm +${sai}mm)`); }
+      else { 
+        const sampleName = sampleQRs[ni] || `NO.${ni+1}`;
+        ngCount++; 
+        ngDetails.push(`${row.name} – ${sampleName}: ${val}mm (TC: ${std}mm +${sai}mm)`); 
+      }
     });
   });
 
@@ -1473,9 +1603,9 @@ async function exportResult() {
   r++;
 
   let dimHeaders = ['Tên kích thước', 'Tiêu chuẩn (mm)', 'Sai số (+mm)'];
-  for(let i=1; i<=n; i++) dimHeaders.push(`NO.${i}`);
+  for(let i=1; i<=n; i++) dimHeaders.push(sampleQRs[i-1] || `NO.${i}`); // Tiêu đề cột đổi theo QR
   dimHeaders.push('Kết quả');
-  for(let i=1; i<=n; i++) dimHeaders.push(`Ảnh xác minh NO.${i}`);
+  for(let i=1; i<=n; i++) dimHeaders.push(`Ảnh ${sampleQRs[i-1] || 'NO.'+i}`); // Tiêu đề ảnh đổi theo QR
   dimHeaders.push('Ảnh mẫu (Admin)');
   
   const headerRow = sheet.getRow(r);
@@ -1714,6 +1844,8 @@ function resetAll() {
   });
   
   const initSamples = getNumSamples();
+  sampleQRs = Array(initSamples).fill(""); // Reset QR
+  
   dimRows.forEach(row => {
     row.measures = Array(initSamples).fill("");
     row.images = Array(initSamples).fill(null); 
@@ -1725,6 +1857,7 @@ function resetAll() {
   document.getElementById("ghi-chu").value = "";
   
   renderInfo();
+  renderQRs();
   renderDims(); 
   renderClips(); 
   renderTapes();
@@ -1740,7 +1873,6 @@ function showToast(msg) {
   setTimeout(() => t.classList.remove("show"), 2500);
 }
 </script>
-
 
 </body>
 </html>
