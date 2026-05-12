@@ -456,7 +456,7 @@
 
   <div class="btn-row" style="margin-top:12px;">
     <button class="btn btn-secondary" onclick="goPage(2)">← Quay lại</button>
-    <button class="btn btn-primary" onclick="exportResult()">📤 Gửi Quản lý</button>
+    <button class="btn btn-primary" onclick="exportResult()">📤 Gửi Quản lý / Drive</button>
   </div>
 
   <button class="btn btn-danger" style="margin-top:10px;" onclick="resetAll()">🗑 Tạo phiếu mới</button>
@@ -543,13 +543,13 @@ const DEFAULT_DIMS = Array.from({ length: 50 }, (_, i) => ({
 }));
 
 const DEFAULT_CLIPS = [
-  { name: "Clip loại A", pos: "", qty_yc: "", result: null },
+  { name: "Clip loại A", pos: "", result: null },
 ];
 
 const DEFAULT_TAPES = [
-  { name: "Băng vàng", color: "#f0a500", pos: "", vong_yc: "", result: null },
-  { name: "Băng đỏ",   color: "#e63946", pos: "", vong_yc: "", result: null },
-  { name: "Băng trắng",color: "#e8edf5", pos: "", vong_yc: "", result: null },
+  { name: "Băng vàng", color: "#f0a500", pos: "", result: null },
+  { name: "Băng đỏ",   color: "#e63946", pos: "", result: null },
+  { name: "Băng trắng",color: "#e8edf5", pos: "", result: null },
 ];
 
 let infoRows = [];
@@ -584,8 +584,8 @@ document.addEventListener("DOMContentLoaded", () => {
       measures: Array(initSamples).fill(""), 
       images: Array(initSamples).fill(null) 
     }));
-    clipRows = embeddedConfig.clipRows.map(c => ({ ...c, result: null }));
-    tapeRows = embeddedConfig.tapeRows.map(t => ({ ...t, result: null }));
+    clipRows = embeddedConfig.clipRows.map(c => ({ name: c.name, pos: c.pos, result: null, refImage: c.refImage }));
+    tapeRows = embeddedConfig.tapeRows.map(t => ({ name: t.name, color: t.color, pos: t.pos, result: null, refImage: t.refImage }));
   } else {
     infoRows = JSON.parse(JSON.stringify(DEFAULT_INFO));
     infoRows.forEach(row => { if(row.type === 'date' && !row.value) row.value = new Date().toISOString().slice(0,10); });
@@ -609,8 +609,8 @@ function exportConfiguredHTML() {
   const exportConfig = {
       infoRows: infoRows.map(r => ({ label: r.label, type: r.type, value: r.type === 'date' ? '' : r.value })), 
       dimRows: dimRows.map(r => ({ name: r.name, std: r.std, sai_so_duong: r.sai_so_duong, sai_so_am: r.sai_so_am, refImage: r.refImage })),
-      clipRows: clipRows.map(r => ({ name: r.name, pos: r.pos, qty_yc: r.qty_yc, refImage: r.refImage })),
-      tapeRows: tapeRows.map(r => ({ name: r.name, color: r.color, pos: r.pos, vong_yc: r.vong_yc, refImage: r.refImage }))
+      clipRows: clipRows.map(r => ({ name: r.name, pos: r.pos, refImage: r.refImage })),
+      tapeRows: tapeRows.map(r => ({ name: r.name, color: r.color, pos: r.pos, refImage: r.refImage }))
   };
 
   document.getElementById("app-config").textContent = JSON.stringify(exportConfig);
@@ -784,7 +784,6 @@ function handleRefImageUpload(type, ri, input) {
 }
 
 function removeRefImage(type, ri) {
-  if(!confirm("Xóa ảnh minh họa này?")) return;
   if (type === 'dim') { dimRows[ri].refImage = null; renderAdminDims(); }
   else if (type === 'clip') { clipRows[ri].refImage = null; renderAdminClips(); }
   else if (type === 'tape') { tapeRows[ri].refImage = null; renderAdminTapes(); }
@@ -832,7 +831,7 @@ function renderAdminInfo() {
   });
 }
 function addInfoRow() { infoRows.push({ label: "Trường dữ liệu mới", type: "text", value: "" }); renderAdminInfo(); showToast("Đã thêm trường mới"); }
-function removeInfo(ri) { if(!confirm("Bạn có chắc muốn xoá trường này?")) return; infoRows.splice(ri, 1); renderAdminInfo(); }
+function removeInfo(ri) { infoRows.splice(ri, 1); renderAdminInfo(); }
 
 
 // ── MỞ TRỰC TIẾP CAMERA SAU QUÉT QR / BARCODE ──────────────────────────────
@@ -925,7 +924,7 @@ function updateQRLabels() {
 }
 
 // ── XỬ LÝ CHỤP ẢNH KÍCH THƯỚC (CỦA NHÂN VIÊN) ──────────────────────────────
-// TĂNG CHẤT LƯỢNG ẢNH HD MAX 2500px, CHẤT LƯỢNG 95%
+// ĐÃ BỎ `capture="environment"` ĐỂ MÁY CHO PHÉP TẢI ẢNH TỪ THƯ VIỆN
 function handleImageUpload(ri, ni, input) {
   const file = input.files[0];
   if (!file) return;
@@ -954,10 +953,8 @@ function handleImageUpload(ri, ni, input) {
 }
 
 function removeImage(ri, ni) {
-  if(confirm("Xóa ảnh chụp thực tế này?")) {
-    dimRows[ri].images[ni] = null;
-    renderDims();
-  }
+  dimRows[ri].images[ni] = null;
+  renderDims();
 }
 
 // ── DIM ROWS (NHÂN VIÊN) ───────────────────────────────────────────────────
@@ -1007,10 +1004,10 @@ function renderDims() {
               oninput="dimRows[${ri}].measures[${ni}]=this.value;updateSingleResult(${ri},${ni},this)">
             <div class="result-badge empty" id="rb-${ri}-${ni}"></div>
             
-            <input type="file" id="cam-${ri}-${ni}" accept="image/*" capture="environment" style="display:none" onchange="handleImageUpload(${ri}, ${ni}, this)">
+            <input type="file" id="cam-${ri}-${ni}" accept="image/*" style="display:none" onchange="handleImageUpload(${ri}, ${ni}, this)">
             
             ${!row.images[ni] ? `
-              <button class="btn-cam" onclick="document.getElementById('cam-${ri}-${ni}').click()">📷 Chụp</button>
+              <button class="btn-cam" onclick="document.getElementById('cam-${ri}-${ni}').click()">📷 Chụp/Tải</button>
             ` : `
               <div class="img-wrapper">
                 <img src="${row.images[ni]}" class="img-preview">
@@ -1125,7 +1122,6 @@ function addDimRow() {
 }
 
 function removeDim(ri) {
-  if(!confirm("Bạn có chắc muốn xoá kích thước này?")) return;
   dimRows.splice(ri, 1);
   renderAdminDims();
 }
@@ -1156,12 +1152,6 @@ function renderAdminClips() {
             style="width:100%; background:var(--surface); border:1px solid var(--border); border-radius:4px; padding:8px 10px; font-size:13px; color:var(--text); outline:none;"
             onchange="clipRows[${ri}].pos=this.value">
         </div>
-        <div style="flex:1;">
-          <div style="font-size:10px; color:var(--text2); margin-bottom: 4px;">Số lượng YC</div>
-          <input type="number" value="${row.qty_yc}" placeholder="Ví dụ: 2"
-            style="width:100%; background:var(--surface); border:1px solid var(--border); border-radius:4px; padding:8px 10px; font-size:13px; color:var(--text); outline:none; font-family:'IBM Plex Mono',monospace;"
-            onchange="clipRows[${ri}].qty_yc=this.value">
-        </div>
       </div>
       <div style="display: flex; gap: 8px; margin-top: 8px; border-top: 1px dashed var(--border); padding-top: 8px;">
         <div style="flex:1;">
@@ -1177,8 +1167,8 @@ function renderAdminClips() {
     list.appendChild(div);
   });
 }
-function addAdminClip() { clipRows.push({ name: "Clip mới", pos: "", qty_yc: "", result: null, refImage: null }); renderAdminClips(); showToast("Đã thêm Clip"); }
-function removeAdminClip(ri) { if(confirm("Xóa Clip này?")){ clipRows.splice(ri,1); renderAdminClips(); } }
+function addAdminClip() { clipRows.push({ name: "Clip mới", pos: "", result: null, refImage: null }); renderAdminClips(); showToast("Đã thêm Clip"); }
+function removeAdminClip(ri) { clipRows.splice(ri,1); renderAdminClips(); }
 
 function renderAdminTapes() {
   const list = document.getElementById("admin-tape-list");
@@ -1204,12 +1194,6 @@ function renderAdminTapes() {
             style="width:100%; background:var(--surface); border:1px solid var(--border); border-radius:4px; padding:8px 10px; font-size:13px; color:var(--text); outline:none;"
             onchange="tapeRows[${ri}].pos=this.value">
         </div>
-        <div style="flex:1;">
-          <div style="font-size:10px; color:var(--text2); margin-bottom: 4px;">Số vòng YC</div>
-          <input type="number" value="${row.vong_yc}" placeholder="Ví dụ: 3"
-            style="width:100%; background:var(--surface); border:1px solid var(--border); border-radius:4px; padding:8px 10px; font-size:13px; color:var(--text); outline:none; font-family:'IBM Plex Mono',monospace;"
-            onchange="tapeRows[${ri}].vong_yc=this.value">
-        </div>
       </div>
       <div style="display: flex; gap: 8px; margin-top: 8px; border-top: 1px dashed var(--border); padding-top: 8px;">
         <div style="flex:1;">
@@ -1225,8 +1209,8 @@ function renderAdminTapes() {
     list.appendChild(div);
   });
 }
-function addAdminTape() { tapeRows.push({ name: "Băng dính mới", color: "#8a94a6", pos: "", vong_yc: "", result: null, refImage: null }); renderAdminTapes(); showToast("Đã thêm Băng dính"); }
-function removeAdminTape(ri) { if(confirm("Xóa Băng dính này?")){ tapeRows.splice(ri,1); renderAdminTapes(); } }
+function addAdminTape() { tapeRows.push({ name: "Băng dính mới", color: "#8a94a6", pos: "", result: null, refImage: null }); renderAdminTapes(); showToast("Đã thêm Băng dính"); }
+function removeAdminTape(ri) { tapeRows.splice(ri,1); renderAdminTapes(); }
 
 
 // ── WORKER CLIP & TAPE ROWS (Chỉ được chọn ĐẠT / NG) ───────────────────────
@@ -1255,14 +1239,10 @@ function renderClips() {
       
       ${refHtml}
 
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px; background: rgba(255,255,255,0.03); padding: 8px; border-radius: 6px;">
+      <div style="margin-bottom:10px; background: rgba(255,255,255,0.03); padding: 8px; border-radius: 6px;">
         <div>
           <div style="font-size:10px;color:var(--text2);font-weight:600;margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px;">Vị trí lắp</div>
           <div style="font-size:13px;color:var(--text);">${row.pos || "—"}</div>
-        </div>
-        <div>
-          <div style="font-size:10px;color:var(--text2);font-weight:600;margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px;">Số lượng YC</div>
-          <div style="font-size:13px;color:var(--amber);font-family:'IBM Plex Mono',monospace;font-weight:bold;">${row.qty_yc || "0"}</div>
         </div>
       </div>
       <div style="display:flex;align-items:center;justify-content:space-between;">
@@ -1303,14 +1283,10 @@ function renderTapes() {
       
       ${refHtml}
 
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px; background: rgba(255,255,255,0.03); padding: 8px; border-radius: 6px;">
+      <div style="margin-bottom:10px; background: rgba(255,255,255,0.03); padding: 8px; border-radius: 6px;">
         <div>
           <div style="font-size:10px;color:var(--text2);font-weight:600;margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px;">Vị trí dán</div>
           <div style="font-size:13px;color:var(--text);">${row.pos || "—"}</div>
-        </div>
-        <div>
-          <div style="font-size:10px;color:var(--text2);font-weight:600;margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px;">Số vòng YC</div>
-          <div style="font-size:13px;color:var(--amber);font-family:'IBM Plex Mono',monospace;font-weight:bold;">${row.vong_yc || "0"}</div>
         </div>
       </div>
       <div style="display:flex;align-items:center;justify-content:space-between;">
@@ -1389,7 +1365,7 @@ function calcResult() {
   }
 }
 
-// ── EXPORT EXCEL & TỰ ĐỘNG GỬI TELEGRAM ───────────────────────────────────
+// ── EXPORT EXCEL & GỬI GOOGLE DRIVE (WEB APP URL MỚI) ───────────────────────────────────
 async function exportResult() {
   const workbook = new ExcelJS.Workbook();
   const sheet = workbook.addWorksheet('Checklist QC');
@@ -1551,7 +1527,7 @@ async function exportResult() {
   applyBorder(extraTitle);
   r++;
 
-  let extraHeaders = ['Loại vật tư', 'Vị trí', 'Số lượng/Vòng'];
+  let extraHeaders = ['Loại vật tư', 'Vị trí', ''];
   for(let i=1; i<=n; i++) extraHeaders.push(''); 
   extraHeaders.push('Kết quả');
   for(let i=1; i<=n; i++) extraHeaders.push(''); 
@@ -1577,7 +1553,7 @@ async function exportResult() {
     let dataRow = sheet.getRow(r);
     dataRow.getCell(1).value = `[Clip] ${row.name}`;
     dataRow.getCell(2).value = row.pos;
-    dataRow.getCell(3).value = row.qty_yc;
+    dataRow.getCell(3).value = "—";
     
     if (n >= 1) {
         sheet.mergeCells(r, 4, r, 3 + n);
@@ -1606,7 +1582,7 @@ async function exportResult() {
     let dataRow = sheet.getRow(r);
     dataRow.getCell(1).value = `[Băng dính] ${row.name}`;
     dataRow.getCell(2).value = row.pos;
-    dataRow.getCell(3).value = row.vong_yc;
+    dataRow.getCell(3).value = "—";
     
     if (n >= 1) {
         sheet.mergeCells(r, 4, r, 3 + n);
@@ -1696,40 +1672,58 @@ async function exportResult() {
   for(let c=1; c<=maxColNum; c++) applyBorder(sheet.getCell(r, c));
   r++;
 
-  // ──────────────── LƯU VÀ GỬI TELEGRAM ────────────────
+  // ──────────────── LƯU VÀ GỬI GOOGLE DRIVE CỦA QUẢN LÝ ────────────────
   const khSearch = infoRows.find(item => item.label.toLowerCase().includes("khách"))?.value || "Khach";
+  const maBanVeSearch = infoRows.find(item => item.label.toLowerCase().includes("bản vẽ"))?.value || "MaBV";
   const slSearch = getNumSamples();
-  let filename = `QC_Checklist_${khSearch}_SL${slSearch}.xlsx`;
+  
+  // ĐẶT TÊN FILE THEO YÊU CẦU CỦA NGƯỜI DÙNG: Checklist_Khách hàng_mã bản vẽ_SL...
+  let filename = `Checklist_${khSearch}_${maBanVeSearch}_SL${slSearch}.xlsx`;
 
   const buffer = await workbook.xlsx.writeBuffer();
   const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
 
-  showToast("⏳ Đang đóng gói và gửi cho Quản lý...");
+  showToast("⏳ Đang xử lý báo cáo Excel...");
 
-  const BOT_TOKEN = "8716815549:AAGL2Ln7y5jblqcR3jHOtgDackDniXtLpgo"; 
-  const CHAT_ID = "5797373205";
-
-  const formData = new FormData();
-  formData.append("chat_id", CHAT_ID);
-  formData.append("document", blob, filename);
-  
-  const captionText = `🚨 BÁO CÁO QC MỚI\n📌 Khách hàng: ${khSearch}\n📦 Số lượng mẫu: ${slSearch}\n⏰ Thời gian: ${new Date().toLocaleString('vi-VN')}`;
-  formData.append("caption", captionText);
-
+  // 1. TỰ ĐỘNG TẢI FILE VỀ MÁY TÍNH / ĐIỆN THOẠI CỦA NHÂN VIÊN
   try {
-    const response = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendDocument`, {
-      method: "POST",
-      body: formData
-    });
+    const downloadUrl = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = downloadUrl;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(downloadUrl);
+    a.remove();
+  } catch (e) {
+    console.error("Trình duyệt không hỗ trợ tải trực tiếp.", e);
+  }
+
+  // 2. GỬI FILE VÀO GOOGLE DRIVE BẰNG LINK WEB APP BẠN CUNG CẤP
+  const reader = new FileReader();
+  reader.readAsDataURL(blob);
+  reader.onloadend = async function() {
+    const base64data = reader.result.split(',')[1];
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbykzrQ9vJnl_4BilgQiq5CiXivRCeZX8fE4aM0bldhPll_eCJbEuLavfbeR68B8mVzH/exec";
     
-    if (response.ok) {
-      showToast("✅ Đã gửi báo cáo thành công cho Quản lý!");
-    } else {
-      showToast("❌ Gửi thất bại, vui lòng kiểm tra kết nối mạng!");
+    showToast("⏳ Đang tải file lên Google Drive...");
+    
+    try {
+      await fetch(SCRIPT_URL, {
+        method: "POST",
+        mode: "no-cors", 
+        body: JSON.stringify({
+          filename: filename,
+          mimeType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+          base64: base64data
+        })
+      });
+      
+      showToast("✅ Đã tải file về máy và gửi lên Google Drive!");
+    } catch (error) {
+      showToast("❌ Không thể gửi lên Drive, vui lòng kiểm tra mạng!");
+      console.error(error);
     }
-  } catch (error) {
-    showToast("❌ Lỗi mạng, không thể gửi file!");
-    console.error(error);
   }
 }
 
