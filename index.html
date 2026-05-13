@@ -1672,12 +1672,10 @@ async function exportResult() {
   for(let c=1; c<=maxColNum; c++) applyBorder(sheet.getCell(r, c));
   r++;
 
-  // ──────────────── LƯU VÀ GỬI GOOGLE DRIVE CỦA QUẢN LÝ ────────────────
+  // ──────────────── LƯU VÀ GỬI GOOGLE DRIVE CỦA QUẢN LÝ (ĐÃ SỬA LỖI ĐIỆN THOẠI) ────────────────
   const khSearch = infoRows.find(item => item.label.toLowerCase().includes("khách"))?.value || "Khach";
   const maBanVeSearch = infoRows.find(item => item.label.toLowerCase().includes("bản vẽ"))?.value || "MaBV";
   const slSearch = getNumSamples();
-  
-  // ĐẶT TÊN FILE THEO YÊU CẦU CỦA NGƯỜI DÙNG: Checklist_Khách hàng_mã bản vẽ_SL...
   let filename = `Checklist_${khSearch}_${maBanVeSearch}_SL${slSearch}.xlsx`;
 
   const buffer = await workbook.xlsx.writeBuffer();
@@ -1685,45 +1683,72 @@ async function exportResult() {
 
   showToast("⏳ Đang xử lý báo cáo Excel...");
 
-  // 1. TỰ ĐỘNG TẢI FILE VỀ MÁY TÍNH / ĐIỆN THOẠI CỦA NHÂN VIÊN
-  try {
-    const downloadUrl = window.URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = downloadUrl;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    window.URL.revokeObjectURL(downloadUrl);
-    a.remove();
-  } catch (e) {
-    console.error("Trình duyệt không hỗ trợ tải trực tiếp.", e);
-  }
+  // Tách mã Base64 bằng Promise để xử lý đồng bộ
+  const getBase64 = (fileBlob) => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(fileBlob);
+      reader.onload = () => {
+        let encoded = reader.result.toString().replace(/^data:(.*,)?/, '');
+        if ((encoded.length % 4) > 0) {
+          encoded += '='.repeat(4 - (encoded.length % 4));
+        }
+        resolve(encoded);
+      };
+      reader.onerror = error => reject(error);
+    });
+  };
 
-  // 2. GỬI FILE VÀO GOOGLE DRIVE BẰNG LINK WEB APP BẠN CUNG CẤP
-  const reader = new FileReader();
-  reader.readAsDataURL(blob);
-  reader.onloadend = async function() {
-    const base64data = reader.result.split(',')[1];
+  try {
+    const base64data = await getBase64(blob);
     const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbykzrQ9vJnl_4BilgQiq5CiXivRCeZX8fE4aM0bldhPll_eCJbEuLavfbeR68B8mVzH/exec";
-    
+
     showToast("⏳ Đang tải file lên Google Drive...");
+
+    // 1. GỬI LÊN DRIVE TRƯỚC TIÊN (Tránh trình duyệt mobile tạm dừng do download)
+    await fetch(SCRIPT_URL, {
+      method: "POST",
+      mode: "no-cors", 
+      body: JSON.stringify({
+        filename: filename,
+        mimeType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        base64: base64data
+      })
+    });
+
+    showToast("✅ Đã gửi lên Google Drive thành công!");
+
+    // 2. SAU ĐÓ MỚI KÍCH HOẠT TẢI VỀ MÁY ĐIỆN THOẠI
+    setTimeout(() => {
+      try {
+        const downloadUrl = window.URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = downloadUrl;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(downloadUrl);
+        a.remove();
+      } catch (e) {
+        console.error("Trình duyệt không hỗ trợ tải trực tiếp.", e);
+      }
+    }, 1500); // Chờ 1.5s để hiển thị thông báo thành công
+
+  } catch (error) {
+    showToast("❌ Không thể gửi lên Drive, file sẽ được tải về máy!");
+    console.error(error);
     
+    // Nếu lỗi gửi Drive, vẫn cho tải về máy
     try {
-      await fetch(SCRIPT_URL, {
-        method: "POST",
-        mode: "no-cors", 
-        body: JSON.stringify({
-          filename: filename,
-          mimeType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-          base64: base64data
-        })
-      });
-      
-      showToast("✅ Đã tải file về máy và gửi lên Google Drive!");
-    } catch (error) {
-      showToast("❌ Không thể gửi lên Drive, vui lòng kiểm tra mạng!");
-      console.error(error);
-    }
+      const downloadUrl = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = downloadUrl;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(downloadUrl);
+      a.remove();
+    } catch (e) {}
   }
 }
 
